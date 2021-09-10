@@ -4,6 +4,7 @@
 #' @param GRNcuration Table with curation information for interaction
 #' @param curated_counts whether curated counts should be transformed. Can be "standard" (uses the counts from the table), "binary" (transforms all evidence to 1 indepent of the number of counts) or "scaled" (scales the counts within each resource from 0 to 1)
 #' @param mor whether mode of reaction should be added (TRUE or FALSE), if mor should be added rm_bidirectional_rows should be set to TRUE
+#' @param mor_filter can be a numeric value between 0-1 so that only for a given ration a negative sign will be assigned
 #' @param weight how the interactions should be weighted. Can be "none", "evidence","evidence_sign" or "discrepancy_sign". "Evidence" is supposed to be used if no mode or reaction is FAKSE. It is just based on the amount of evidence ignoring their direction.
 #' @param rm_bidirectional_rows removes rows were no sign can be assigned. Based on missing information in TotPositive + TotNeg or same number of information for both. Should be set to TRUE if mor is TRUE or evidence_sign is used
 #' @return Constructed network for decoupler.
@@ -12,7 +13,7 @@
 #'
 #' @export
 
-constructNetwork <- function(GRNcuration, curated_counts = "standard", mor = TRUE, weight = "none", rm_bidirectional_rows = TRUE){
+constructNetwork <- function(GRNcuration, curated_counts = "standard", mor = TRUE, mor_filter = NULL, weight = "none", rm_bidirectional_rows = TRUE){
   # change number of curated information to binaries or scaled values (0-1)
   if (curated_counts == 'binary') {
     GRNcuration <- select(GRNcuration, -totNeg,-totPositive,-totUnknown)
@@ -53,9 +54,19 @@ constructNetwork <- function(GRNcuration, curated_counts = "standard", mor = TRU
   ## Change mode of reaction
   if (mor) {
     morEvidence <- GRNcuration %>% select(c("totNeg","totPositive")) %>% max.col()
-    mor <- morEvidence %>% replace(morEvidence == 1, -1) %>% replace(morEvidence == 2, 1)
-    GRN <- GRN %>% select(-mor) %>% add_column(mor)
+    if (is.numeric(mor_filter)){
+      ratio <- GRNcuration %>% rowwise() %>% mutate(weight = max(c(totNeg, totPositive))/sum(c(totNeg, totPositive, totUnknown))) %>% pull(weight)
+      mor <- morEvidence %>% replace(morEvidence == 1, -1) %>% replace(morEvidence == 2, 1)
+      morRatio <- data.frame(mor = mor,
+                            ratio = ratio)
+      mor <- morRatio %>% mutate(mor = replace(mor, morRatio$ratio < mor_filter, 1)) %>% pull(mor)
+      GRN <- GRN %>% select(-mor) %>% add_column(mor)
+    } else {
+      mor <- morEvidence %>% replace(morEvidence == 1, -1) %>% replace(morEvidence == 2, 1)
+      GRN <- GRN %>% select(-mor) %>% add_column(mor)
+    }
   }
+
 
   ## Change weights
   if (weight == "evidence") {
