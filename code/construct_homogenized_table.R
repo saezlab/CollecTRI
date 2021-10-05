@@ -33,17 +33,17 @@ summarized_tables <- map(ressources, function(x) {
   Regulation_ressource <- counts_ressource[colnames(counts_ressource) == "Regulation"]
 
   summarized_matrix <- matrix(ncol = 3, nrow = nrow(counts_ressource))
-  colnames(summarized_matrix) <- c("Up", "Down", "Unknown")
+  colnames(summarized_matrix) <- c("Positive", "Negative", "Unknown")
   rownames(summarized_matrix) <- rownames(counts_ressource)
 
   for (i in 1:nrow(PMID_ressource)) {
-    test <- unlist(str_split(PMID_ressource[i, ], "\\|"))
-    names(test) <- unlist(str_split(Regulation_ressource[i, ], "\\|"))
-    test[test == ""] <- paste0("Unknown_", 1:sum(test == ""))
+    counts <- unlist(str_split(PMID_ressource[i, ], "\\|"))
+    names(counts) <- unlist(str_split(Regulation_ressource[i, ], "\\|"))
+    counts[counts == ""] <- paste0("Unknown_", 1:sum(counts == ""))
 
-    summarized_matrix[i, 1] <- length(unique(unlist(str_split(test[names(test) %in% c("UP", "Activation", "positive")], ";"))))
-    summarized_matrix[i, 2] <- length(unique(unlist(str_split(test[names(test) %in% c("DOWN", "Repression", "negative")], ";"))))
-    summarized_matrix[i, 3] <- length(unique(unlist(str_split(test[names(test) %in% c("Unknown", "unknown", "")], ";"))))
+    summarized_matrix[i, 1] <- length(unique(unlist(str_split(counts[names(counts) %in% c("UP", "Activation", "positive")], ";"))))
+    summarized_matrix[i, 2] <- length(unique(unlist(str_split(counts[names(counts) %in% c("DOWN", "Repression", "negative")], ";"))))
+    summarized_matrix[i, 3] <- length(unique(unlist(str_split(counts[names(counts) %in% c("Unknown", "unknown", "")], ";"))))
   }
 
   colnames(summarized_matrix) <- paste0(x, "_", colnames(summarized_matrix))
@@ -56,8 +56,8 @@ summarized_tables <- map(ressources, function(x) {
 homogenized_table <- summarized_tables %>% reduce(full_join, by = "TF.TG") %>% column_to_rownames("TF.TG")
 homogenized_table[is.na(homogenized_table)] <- 0
 homogenized_table <- homogenized_table %>%
-                      add_column(total_Up = rowSums(homogenized_table[str_detect(colnames(homogenized_table), "Up")])) %>%
-                      add_column(total_Down = rowSums(homogenized_table[str_detect(colnames(homogenized_table), "Down")])) %>%
-                      add_column(total_Unkwon = rowSums(homogenized_table[str_detect(colnames(homogenized_table), "Unknown")])) %>%
+                      add_column(totNeg = rowSums(homogenized_table[str_detect(colnames(homogenized_table), "Positive")])) %>%
+                      add_column(totPositive = rowSums(homogenized_table[str_detect(colnames(homogenized_table), "Negative")])) %>%
+                      add_column(totUnknown = rowSums(homogenized_table[str_detect(colnames(homogenized_table), "Unknown")])) %>%
                       rownames_to_column("TF.TG")
-write_csv(homogenized_table, "data/homogenized_ressource_new.csv")
+write_csv(homogenized_table, "data/homogenized_ressource_ExTRI.csv")
