@@ -31,11 +31,11 @@ constructNetwork <- function(GRNcuration, curated_counts = "standard", mor = TRU
 
   if (rm_bidirectional_rows){
     # remove rows with no information about direction at all
-    GRNcuration <- GRNcuration %>% filter(rowSums(GRNcuration[c("totNeg", "totPositive")]) > 0)
+    GRNcuration <- GRNcuration %>% dplyr::filter(rowSums(GRNcuration[c("totNeg", "totPositive")]) > 0)
 
     # remove rows with same information for positive and negative
-    nrow(GRNcuration %>% filter(GRNcuration$totNeg == GRNcuration$totPositive)) # number of connections lost
-    GRNcuration <- GRNcuration %>% filter(!GRNcuration$totNeg == GRNcuration$totPositive)
+    nrow(GRNcuration %>% dplyr::filter(GRNcuration$totNeg == GRNcuration$totPositive)) # number of connections lost
+    GRNcuration <- GRNcuration %>% dplyr::filter(!GRNcuration$totNeg == GRNcuration$totPositive)
   }
 
 
