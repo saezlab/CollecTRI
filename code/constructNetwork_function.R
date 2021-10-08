@@ -14,6 +14,14 @@
 #' @export
 
 constructNetwork <- function(GRNcuration, curated_counts = "standard", mor = TRUE, mor_filter = NULL, weight = "none", rm_bidirectional_rows = TRUE){
+  # add up counts for each resource independent of the regulation
+  resources <- unique(str_remove(str_remove(str_remove(colnames(GRNcuration), "_Positive"), "_Negative"), "_Unknown"))
+  resources <- resources[1:(length(resources)-3)]
+  for (resource in resources){
+    name <- paste(resource, "all", sep = "_")
+    GRNcuration <- GRNcuration %>% mutate(!!(name) := rowSums(GRNcuration[str_detect(colnames(GRNcuration), resource)]))
+  }
+
   # change number of curated information to binaries or scaled values (0-1)
   if (curated_counts == 'binary') {
     GRNcuration <- select(GRNcuration, -totNeg,-totPositive,-totUnknown)
@@ -71,7 +79,7 @@ constructNetwork <- function(GRNcuration, curated_counts = "standard", mor = TRU
   ## Change weights
   if (weight == "evidence") {
     # weight based on amount of supporting information
-    likelihood <- GRNcuration %>% rowwise() %>% mutate(weight = sum(c(totNeg, totPositive, totUnknown))/sum(!grepl("tot", colnames(GRNcuration)))) %>% pull(weight)
+    likelihood <- GRNcuration %>% select(ends_with("_all")) %>% rowSums / length(resources)
     GRN <- GRN %>% select(-likelihood) %>% add_column(likelihood)
   } else if (weight == "evidence_sign"){
     # weight based on amount of information for sign
