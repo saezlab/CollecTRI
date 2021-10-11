@@ -9,12 +9,12 @@ library(tidyverse)
 # Network contains 92 kinases with regulon size of 57 ± 86
 bexample_url <- file.path('data', "dorothea_bench_expr.rds")
 bmeta_url <- file.path('data', "dorothea_bench_meta.rds")
-source_url <- file.path('data', "dorothea_signed.rds")
+source_url <- file.path('data', "dorothea_filtered.rds")
 
 # Design contains statistical methods that take weights into account
 design_row <-
   tibble(
-    set_name = "dorothea_signed", # name of the set resource
+    set_name = "dorothea_A", # name of the set resource
     bench_name = "dbd", # name of the benchmark data
     stats_list = list( # a list of the stats to call
       c(
@@ -54,14 +54,17 @@ design_row <-
 input_tibble <- bind_rows(
   design_row,
   design_row %>%
-    mutate(set_name ="dorothea_agnostic") %>%
-    mutate(source_loc = file.path('data', "dorothea_agnostic.rds")),
+    mutate(set_name ="dorothea_A_filtered") %>%
+    mutate(source_loc = file.path('data', "dorothea_A.rds")),
   design_row %>%
-    mutate(set_name ="dorothea_agnostic_weighted") %>%
-    mutate(source_loc = file.path('data', "dorothea_agnostic_weighted.rds")),
+    mutate(set_name ="dorothea_NTNU_signs") %>%
+    mutate(source_loc = file.path('data', "dorothea_NTNU_signs.rds")),
   design_row %>%
-    mutate(set_name ="dorothea_signed_weighted") %>%
-    mutate(source_loc = file.path('data', "dorothea_signed_weighted.rds"))
+    mutate(set_name ="dorothea_NTNU_signs_weights") %>%
+    mutate(source_loc = file.path('data', "dorothea_NTNU_signs_weights.rds")),
+  design_row %>%
+    mutate(set_name ="dorothea_NTNU_weights") %>%
+    mutate(source_loc = file.path('data', "dorothea_NTNU_weights.rds"))
 )
 
 
@@ -105,7 +108,7 @@ ggplot(boxplot_tibble,aes(fill = network, x = statistic, y = prc)) +
 
 
 # get indices of comparison groups (weighted and unweighted network)
-res_weighted_unweighted <- estimate@bench_res %>% filter(set_name %in% c("dorothea_signed", "dorothea_signed_weighted"))
+res_weighted_unweighted <- estimate@bench_res %>% filter(set_name %in% c("dorothea_A", "dorothea_NTNU_weights"))
 comp_groups <- res_weighted_unweighted %>% group_by(statistic) %>% group_rows()
 names(comp_groups) <- res_weighted_unweighted %>% pull(statistic) %>% unique()
 

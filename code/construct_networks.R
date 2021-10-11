@@ -44,32 +44,6 @@ saveRDS(GRN_signed_weighted_discrepancy_sign, "data/GRN_signed_weighted_discrepa
 GRN_signed_weighted_discrepancy_sign <- constructNetwork(GRNcuration = GRNcuration, curated_counts = 'scaled', mor = TRUE, mor_filter = 0.8, weight = "discrepancy_sign") %>% as_tibble()
 saveRDS(GRN_signed_weighted_discrepancy_sign, "data/GRN_signed_weighted_discrepancy_sign_0.8.rds")
 
-#### Dorothea ####
-# Construct different networks from dorothea
-# load curated information
-dorothea <- readRDS("data/dorothea_filtered.rds")
-dorothea <- dorothea %>% filter(confidence == "A")
-NTNU <- readRDS("data/GRN_weighted_evidence.rds")
-
-merged_network <- merge(
-  x=dorothea,
-  y=NTNU,
-  by.x=c("source","target"),
-  by.y=c("source","target"))
-
-# Construct GRNs
-dorothea_signed <- merged_network %>% select(c(source, target, confidence.x, mor.x, likelihood.x)) %>% rename(confidence = confidence.x, likelihood = likelihood.x, mor = mor.x)
-saveRDS(dorothea_signed, "data/dorothea_signed.rds")
-
-dorothea_agnostic <- merged_network %>% select(c(source, target, confidence.x, mor.y, likelihood.x)) %>% rename(confidence = confidence.x, likelihood = likelihood.x, mor = mor.y)
-saveRDS(dorothea_agnostic, "data/dorothea_agnostic.rds")
-
-dorothea_agnostic_weighted <- merged_network %>% select(c(source, target, confidence.x, mor.y, likelihood.y)) %>% rename(confidence = confidence.x, likelihood = likelihood.y, mor = mor.y)
-saveRDS(dorothea_agnostic_weighted, "data/dorothea_agnostic_weighted.rds")
-
-dorothea_signed_weighted <- merged_network %>% select(c(source, target, confidence.x, mor.x, likelihood.y)) %>% rename(confidence = confidence.x, likelihood = likelihood.y, mor = mor.x)
-saveRDS(dorothea_signed_weighted, "data/dorothea_signed_weighted.rds")
-
 #### NTNU v2.0, ExTRI ####
 # Construct different networks for ExTri data
 # First we load the GRN curation tables. GRNcuration_ExTRI_tot just contains the information for the total number of evidence but not the information for each resource separately. Here the duplicated pubmed IDs between resources are just count once.
@@ -158,4 +132,33 @@ network_size <- network_size %>% mutate(network = str_remove(str_remove(network_
   add_row(network = "Dorothea_A", edges = "5378", TF = "94")
 
 write_csv(network_size, "data/network_size.csv")
+
+#### Dorothea ####
+# Construct different networks from dorothea
+# load curated information
+dorothea <- readRDS("data/dorothea_filtered.rds")
+dorothea <- dorothea %>% filter(confidence == "A")
+NTNU <- readRDS("data/ExTRI_comp_scaled_TRUE_NA_evidence_TRUE.rds")
+
+merged_network <- merge(
+  x=dorothea,
+  y=NTNU,
+  by.x=c("source","target"),
+  by.y=c("source","target"))
+#92% overlapp between mor dorothea and mor NTNU
+
+# Construct GRNs
+dorothea_A <- merged_network %>% select(c(source, target, confidence.x, mor.x, likelihood.x)) %>% rename(confidence = confidence.x, likelihood = likelihood.x, mor = mor.x)
+saveRDS(dorothea_A, "data/dorothea_A.rds")
+
+dorothea_NTNU_signs <- merged_network %>% select(c(source, target, confidence.x, mor.y, likelihood.x)) %>% rename(confidence = confidence.x, likelihood = likelihood.x, mor = mor.y)
+saveRDS(dorothea_NTNU_signs, "data/dorothea_NTNU_signs.rds")
+
+dorothea_NTNU_signs_weights <- merged_network %>% select(c(source, target, confidence.x, mor.y, likelihood.y)) %>% rename(confidence = confidence.x, likelihood = likelihood.y, mor = mor.y)
+saveRDS(dorothea_NTNU_signs_weights, "data/dorothea_NTNU_signs_weights.rds")
+
+dorothea_NTNU_weights <- merged_network %>% select(c(source, target, confidence.x, mor.x, likelihood.y)) %>% rename(confidence = confidence.x, likelihood = likelihood.y, mor = mor.x)
+saveRDS(dorothea_NTNU_weights, "data/dorothea_NTNU_weights.rds")
+
+
 
