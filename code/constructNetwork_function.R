@@ -87,7 +87,7 @@ constructNetwork <- function(GRNcuration, curated_counts = "standard", mor = TRU
     GRN <- GRN %>% select(-likelihood) %>% add_column(likelihood)
   } else if (weight == "discrepancy_sign"){
     # weight based on discrepancies in sign
-    likelihood <- GRNcuration %>% rowwise() %>% mutate(weight = abs(totNeg*0+totPositive*1+totNeg*-1)/sum(c(totNeg, totPositive, totUnknown))) %>% pull(weight)
+    likelihood <- GRNcuration %>% rowwise() %>% mutate(weight = abs(totUnknown*0+totPositive*1+totNeg*-1)/sum(c(totNeg, totPositive, totUnknown))) %>% pull(weight)
     GRN <- GRN %>% select(-likelihood) %>% add_column(likelihood)
   } else if (weight == "evidence_tot"){
     max_evidence <- sum(max(GRNcuration$totNeg) + max(GRNcuration$totPositive) + max(GRNcuration$totUnknown))
