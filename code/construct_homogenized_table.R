@@ -15,6 +15,7 @@ colnames(NTNU_compiled_raw) <- c(
 
 NTNU_raw <- NTNU_compiled_raw[str_detect(colnames(NTNU_compiled_raw), "PMID") | str_detect(colnames(NTNU_compiled_raw), "Regulation")]
 rownames(NTNU_raw) <- NTNU_compiled_raw$TF.TG
+NTNU_raw$HTRI_PMID <- str_replace_all(NTNU_raw$HTRI_PMID, "\\|", ";")
 
 head(NTNU_raw)
 ressources <- unique(sapply(str_split(colnames(NTNU_raw), "_"), "[[", 1))
@@ -56,8 +57,8 @@ summarized_tables <- map(ressources, function(x) {
 homogenized_table <- summarized_tables %>% reduce(full_join, by = "TF.TG") %>% column_to_rownames("TF.TG")
 homogenized_table[is.na(homogenized_table)] <- 0
 homogenized_table <- homogenized_table %>%
-                      add_column(totNeg = rowSums(homogenized_table[str_detect(colnames(homogenized_table), "Positive")])) %>%
-                      add_column(totPositive = rowSums(homogenized_table[str_detect(colnames(homogenized_table), "Negative")])) %>%
+                      add_column(totPositive = rowSums(homogenized_table[str_detect(colnames(homogenized_table), "Positive")])) %>%
+                      add_column(totNeg = rowSums(homogenized_table[str_detect(colnames(homogenized_table), "Negative")])) %>%
                       add_column(totUnknown = rowSums(homogenized_table[str_detect(colnames(homogenized_table), "Unknown")])) %>%
                       rownames_to_column("TF.TG")
 write_csv(homogenized_table, "data/homogenized_ressource_ExTRI.csv")
