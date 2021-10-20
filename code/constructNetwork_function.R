@@ -63,7 +63,7 @@ constructNetwork <- function(GRNcuration, curated_counts = "standard", mor = TRU
   if (mor) {
     morEvidence <- GRNcuration %>% select(c("totNeg","totPositive")) %>% max.col()
     if (is.numeric(mor_filter)){
-      ratio <- GRNcuration %>% rowwise() %>% mutate(weight = max(c(totNeg, totPositive))/sum(c(totNeg, totPositive, totUnknown))) %>% pull(weight)
+      ratio <- GRNcuration %>% rowwise() %>% mutate(weight = max(c(totNeg, totPositive))/sum(c(totNeg, totPositive))) %>% pull(weight)
       mor <- morEvidence %>% replace(morEvidence == 1, -1) %>% replace(morEvidence == 2, 1)
       morRatio <- data.frame(mor = mor,
                             ratio = ratio)
