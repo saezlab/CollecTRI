@@ -94,7 +94,7 @@ write_csv(network_size, "data/network_size.csv")
 # Construct different networks from dorothea
 # load curated information
 dorothea <- readRDS("data/dorothea_filtered.rds")
-dorothea <- dorothea %>% filter(confidence == "A")
+dorothea <- dorothea %>% filter(confidence %in% c("A"))
 NTNU <- readRDS("data/ExTRI_comp_scaled_TRUE_1_evidence_TRUE.rds")
 
 merged_network <- merge(
@@ -111,10 +111,10 @@ dorothea_A <- merged_network %>% select(c(source, target, confidence.x, mor.x, l
 saveRDS(dorothea_A, "data/dorothea_A.rds")
 
 dorothea_NTNU_signs <- merged_network %>% select(c(source, target, confidence.x, mor.y, likelihood.x)) %>% rename(confidence = confidence.x, likelihood = likelihood.x, mor = mor.y)
-saveRDS(dorothea_NTNU_signs, "data/dorothea_NTNU_signs.rds")
+saveRDS(dorothea_NTNU_signs, "data/dorothea_A_NTNU_signs.rds")
 
 dorothea_NTNU_signs_weights <- merged_network %>% select(c(source, target, confidence.x, mor.y, likelihood.y)) %>% rename(confidence = confidence.x, likelihood = likelihood.y, mor = mor.y)
-saveRDS(dorothea_NTNU_signs_weights, "data/dorothea_NTNU_signs_weights.rds")
+saveRDS(dorothea_NTNU_signs_weights, "data/dorothea_A_NTNU_signs_weights.rds")
 
 dorothea_NTNU_weights <- merged_network %>% select(c(source, target, confidence.x, mor.x, likelihood.y)) %>% rename(confidence = confidence.x, likelihood = likelihood.y, mor = mor.x)
-saveRDS(dorothea_NTNU_weights, "data/dorothea_NTNU_weights.rds")
+saveRDS(dorothea_NTNU_weights, "data/dorothea_A_NTNU_weights.rds")
