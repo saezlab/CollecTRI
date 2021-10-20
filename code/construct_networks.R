@@ -1,49 +1,6 @@
 library(tidyverse)
 source("code/constructNetwork_function.R")
 
-#### NTNU v1.0 ####
-# Construct different networks from curated NTNU information
-# load curated information
-GRNcuration <- read.csv('data/homogenized_resource.csv') %>%
-  column_to_rownames(var = "TF.TG")
-
-# Construct GRNs
-GRN_agnostic <- constructNetwork(GRNcuration = GRNcuration, curated_counts = 'scaled', mor = FALSE, weight = "none") %>% as_tibble()
-saveRDS(GRN_agnostic, "data/GRN_agnostic.rds")
-
-GRN_weighted_evidence <- constructNetwork(GRNcuration = GRNcuration, curated_counts = 'scaled', mor = FALSE, weight = "evidence") %>% as_tibble()
-saveRDS(GRN_weighted_evidence, "data/GRN_weighted_evidence.rds")
-
-GRN_agnostic_unrestricted <- constructNetwork(GRNcuration = GRNcuration, curated_counts = 'scaled', mor = FALSE, weight = "none", rm_bidirectional_rows = FALSE) %>% as_tibble()
-saveRDS(GRN_agnostic_unrestricted, "data/GRN_agnostic_unrestricted.rds")
-
-GRN_weighted_evidence_unrestricted <- constructNetwork(GRNcuration = GRNcuration, curated_counts = 'scaled', mor = FALSE, weight = "evidence", rm_bidirectional_rows = FALSE) %>% as_tibble()
-saveRDS(GRN_weighted_evidence_unrestricted, "data/GRN_weighted_evidence_unrestricted.rds")
-
-GRN_signed <- constructNetwork(GRNcuration = GRNcuration, curated_counts = 'scaled', mor = TRUE, weight = "none") %>% as_tibble()
-saveRDS(GRN_signed, "data/GRN_signed.rds")
-
-GRN_signed <- constructNetwork(GRNcuration = GRNcuration, curated_counts = 'scaled', mor = TRUE, mor_filter = 0.8, weight = "none") %>% as_tibble()
-saveRDS(GRN_signed, "data/GRN_signed_0.8.rds")
-
-GRN_signed_weighted_evidence <- constructNetwork(GRNcuration = GRNcuration, curated_counts = 'scaled', mor = TRUE, weight = "evidence") %>% as_tibble()
-saveRDS(GRN_signed_weighted_evidence, "data/GRN_signed_weighted_evidence.rds")
-
-GRN_signed_weighted_evidence <- constructNetwork(GRNcuration = GRNcuration, curated_counts = 'scaled', mor = TRUE, mor_filter = 0.8, weight = "evidence") %>% as_tibble()
-saveRDS(GRN_signed_weighted_evidence, "data/GRN_signed_weighted_evidence_0.8.rds")
-
-GRN_signed_weighted_evidence_sign <- constructNetwork(GRNcuration = GRNcuration, curated_counts = 'scaled', mor = TRUE, weight = "evidence_sign") %>% as_tibble()
-saveRDS(GRN_signed_weighted_evidence_sign, "data/GRN_signed_weighted_evidence_sign.rds")
-
-GRN_signed_weighted_evidence_sign <- constructNetwork(GRNcuration = GRNcuration, curated_counts = 'scaled', mor = TRUE, mor_filter = 0.8, weight = "evidence_sign") %>% as_tibble()
-saveRDS(GRN_signed_weighted_evidence_sign, "data/GRN_signed_weighted_evidence_sign_0.8.rds")
-
-GRN_signed_weighted_discrepancy_sign <- constructNetwork(GRNcuration = GRNcuration, curated_counts = 'scaled', mor = TRUE, weight = "discrepancy_sign") %>% as_tibble()
-saveRDS(GRN_signed_weighted_discrepancy_sign, "data/GRN_signed_weighted_discrepancy_sign.rds")
-
-GRN_signed_weighted_discrepancy_sign <- constructNetwork(GRNcuration = GRNcuration, curated_counts = 'scaled', mor = TRUE, mor_filter = 0.8, weight = "discrepancy_sign") %>% as_tibble()
-saveRDS(GRN_signed_weighted_discrepancy_sign, "data/GRN_signed_weighted_discrepancy_sign_0.8.rds")
-
 #### NTNU v2.0, ExTRI ####
 # Construct different networks for ExTri data
 # First we load the GRN curation tables. GRNcuration_ExTRI_tot just contains the information for the total number of evidence but not the information for each resource separately. Here the duplicated pubmed IDs between resources are just count once.
@@ -67,7 +24,7 @@ GRNcuration_new <- GRNcuration_ExTRI %>%
 networks_weights <- tibble(GRNcuration = list(GRNcuration_ExTRI),
                           curated_counts = "scaled",
                           mor = TRUE,
-                          mor_filter = NA,
+                          mor_filter = 1,
                           weight = c("none", "evidence", "evidence_sign", "discrepancy_sign"),
                           rm_bidirectional_rows = TRUE)
 
@@ -81,14 +38,14 @@ networks_sign <- tibble(GRNcuration = list(GRNcuration_ExTRI),
 networks_tot <- tibble(GRNcuration = list(GRNcuration_ExTRI_tot),
                            curated_counts = "standard",
                            mor = c(FALSE, TRUE, FALSE, TRUE),
-                           mor_filter = NA,
+                           mor_filter = 1,
                            weight = c("none", "none", "evidence_tot", "evidence_tot"),
                            rm_bidirectional_rows = TRUE)
 
 networks_comparison <- tibble(GRNcuration = list(GRNcuration_ExTRI),
                              curated_counts = "scaled",
                              mor = c(FALSE, TRUE, FALSE, TRUE),
-                             mor_filter = NA,
+                             mor_filter = 1,
                              weight = c("none", "none", "evidence", "evidence"),
                              rm_bidirectional_rows = TRUE)
 
@@ -138,14 +95,16 @@ write_csv(network_size, "data/network_size.csv")
 # load curated information
 dorothea <- readRDS("data/dorothea_filtered.rds")
 dorothea <- dorothea %>% filter(confidence == "A")
-NTNU <- readRDS("data/ExTRI_comp_scaled_TRUE_NA_evidence_TRUE.rds")
+NTNU <- readRDS("data/ExTRI_comp_scaled_TRUE_1_evidence_TRUE.rds")
 
 merged_network <- merge(
   x=dorothea,
   y=NTNU,
   by.x=c("source","target"),
   by.y=c("source","target"))
-#92% overlapp between mor dorothea and mor NTNU
+
+sum(merged_network$mor.x == merged_network$mor.y)/nrow(merged_network) #94% overlapp between mor dorothea and mor NTNU
+
 
 # Construct GRNs
 dorothea_A <- merged_network %>% select(c(source, target, confidence.x, mor.x, likelihood.x)) %>% rename(confidence = confidence.x, likelihood = likelihood.x, mor = mor.x)
@@ -159,6 +118,3 @@ saveRDS(dorothea_NTNU_signs_weights, "data/dorothea_NTNU_signs_weights.rds")
 
 dorothea_NTNU_weights <- merged_network %>% select(c(source, target, confidence.x, mor.x, likelihood.y)) %>% rename(confidence = confidence.x, likelihood = likelihood.y, mor = mor.x)
 saveRDS(dorothea_NTNU_weights, "data/dorothea_NTNU_weights.rds")
-
-
-
