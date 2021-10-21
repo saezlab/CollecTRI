@@ -1,0 +1,54 @@
+---
+title: "network analysis"
+author: "Sophia Müller-Dott"
+date: "10/14/2021"
+output: html_document
+---
+```{r}
+library(tidyverse)
+```
+# Load data
+```{r}
+network <- readRDS(file = "data/ExTRI_comp_scaled_TRUE_1_evidence_TRUE.rds")
+benchmark <- readRDS(file = "data/rna_meta.rds")
+TF_benchmark <- unique(benchmark$target)
+dorothea_A <- readRDS(file = "data/dorothea_A.rds") %>% filter(confidence == "A")
+```
+
+# Regulon size and Weight distribution
+Check the regulon size and weight distribution of the NTNU network. First the network is filtered for TF having a regulon size of at least 5.
+```{r}
+regulon_size <- data.frame(table(network$source)) %>% rename(TF = Var1, size = Freq)  %>% filter(size > 5)
+regulon_size_dorothea <- data.frame(table(dorothea_A$source)) %>% rename(TF = Var1, size = Freq)  %>% filter(size > 5)
+
+ggplot(regulon_size, aes(x = log(size))) + 
+  geom_density() + geom_density(data = regulon_size[regulon_size$TF %in% TF_benchmark,], aes(x = log(size)), color = "blue") +
+  geom_density(data = regulon_size_dorothea, aes(x = log(size)), color = "red")
+
+range(regulon_size$size)
+mean(regulon_size$size)
+range(regulon_size[regulon_size$TF %in% TF_benchmark,]$size)
+mean(regulon_size[regulon_size$TF %in% TF_benchmark,]$size)
+```
+```{r}
+network <- network %>% filter(source %in% regulon_size$TF)
+dorothea_A <- dorothea_A %>% filter(source %in% regulon_size_dorothea$TF)
+
+ggplot(network, aes(x = likelihood)) + 
+  geom_density() + geom_density(data = network[network$source %in% TF_benchmark,], aes(x = likelihood), color = "blue")
+
+range(network$likelihood)
+mean(network$likelihood)
+mean(network[network$source %in% TF_benchmark,]$likelihood)
+
+TF_weights <- network %>% group_by(source) %>% summarise(mean_likelihood = mean(likelihood))
+ggplot(TF_weights, aes(x = mean_likelihood)) + 
+  geom_density() + geom_density(data = TF_weights[TF_weights$source %in% TF_benchmark,], aes(x = mean_likelihood), color = "blue")
+
+range(TF_weights$mean_likelihood)
+mean(TF_weights$mean_likelihood)
+range(TF_weights[TF_weights$source %in% TF_benchmark,]$mean_likelihood)
+mean(TF_weights[TF_weights$source %in% TF_benchmark,]$mean_likelihood)
+```
+
+
