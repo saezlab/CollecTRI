@@ -120,7 +120,8 @@ prc <- ggplot(boxplot_tibble,aes(fill = network, x = statistic, y = prc)) +
 
 ggsave("figures/auc/dorothea_A.pdf", device = "pdf", width = 20, height = 8, plot = auc)
 ggsave("figures/prc/dorothea_A.pdf", device = "pdf", width = 20, height = 8, plot = prc)
-
+ggsave("figures/auc/dorothea_A.png", device = "png", width = 20, height = 8, plot = auc)
+ggsave("figures/prc/dorothea_A.png", device = "png", width = 20, height = 8, plot = prc)
 
 
 

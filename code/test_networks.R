@@ -116,5 +116,7 @@ map(names(network_collection), function(name){
 
   ggsave(paste0("figures/auc/", name, ".pdf"), device = "pdf", width = 20, height = 8, plot = auc)
   ggsave(paste0("figures/prc/", name, ".pdf"), device = "pdf", width = 20, height = 8, plot = prc)
+  ggsave(paste0("figures/auc/", name, ".png"), device = "png", width = 20, height = 8, plot = auc)
+  ggsave(paste0("figures/prc/", name, ".png"), device = "png", width = 20, height = 8, plot = prc)
 
 })
