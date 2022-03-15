@@ -1,0 +1,11 @@
+[2022-03-15 09:22:33] [INFO]    [OmnipathR] Initialized cache: `/Users/smuellerdott/Library/Caches/OmnipathR`.
+[2022-03-15 09:22:33] [INFO]    [OmnipathR] Welcome to OmnipathR!
+[2022-03-15 09:22:33] [INFO]    [OmnipathR] Cache record does not exist: `https://omnipathdb.org/interactions?genesymbols=yes&datasets=dorothea&organisms=9606&dorothea_levels=A,B,C,D&fields=sources,references,curation_effort,dorothea_level&license=academic`
+[2022-03-15 09:22:33] [INFO]    [OmnipathR] Retrieving URL: `https://omnipathdb.org/interactions?genesymbols=yes&datasets=dorothea&organisms=9606&dorothea_levels=A,B,C,D&fields=sources,references,curation_effort,dorothea_level&license=academic`
+[2022-03-15 09:22:33] [TRACE]   [OmnipathR] Attempt 1/3: `https://omnipathdb.org/interactions?genesymbols=yes&datasets=dorothea&organisms=9606&dorothea_levels=A,B,C,D&fields=sources,references,curation_effort,dorothea_level&license=academic`
+[2022-03-15 09:22:39] [INFO]    [OmnipathR] Cache item `46d37339bbc3f9a05bb89ccb79278cf1233f5cdf` version 1: status changed from `unknown` to `started`.
+[2022-03-15 09:22:39] [TRACE]   [OmnipathR] Exporting object to RDS: `/Users/smuellerdott/Library/Caches/OmnipathR/46d37339bbc3f9a05bb89ccb79278cf1233f5cdf-1.rds`.
+[2022-03-15 09:22:40] [TRACE]   [OmnipathR] Exported RDS to `/Users/smuellerdott/Library/Caches/OmnipathR/46d37339bbc3f9a05bb89ccb79278cf1233f5cdf-1.rds`.
+[2022-03-15 09:22:40] [INFO]    [OmnipathR] Download ready [key=46d37339bbc3f9a05bb89ccb79278cf1233f5cdf, version=1]
+[2022-03-15 09:22:40] [INFO]    [OmnipathR] Cache item `46d37339bbc3f9a05bb89ccb79278cf1233f5cdf` version 1: status changed from `started` to `ready`.
+[2022-03-15 09:22:42] [SUCCESS] [OmnipathR] Downloaded 278482 interactions.

@@ -2,21 +2,22 @@ library(decoupleRBench)
 library(tidyverse)
 
 #### NTNU networks v2.0 ####
+setwd("/net/data.isilon/ag-saez/bq_smueller/NTNUdecoupleR")
 
 # Paths to benchmark data, benchmark metadata and kinase substrate network
 # Benchmark data contains 82 perturbation experiments covering 27 unique kinases
 # Network contains 92 kinases with regulon size of 57 ± 86
-bexample_url <- file.path('data',"bench", "rna_expr_dorotheaA.rds")
-bmeta_url <- file.path('data',"bench",  "rna_meta_dorotheaA.rds")
-source_url <- file.path('data', "dorothea", "dorothea_A.rds")
+bexample_url <- file.path('data',"bench", "knockTF_expr_dorotheaA_new.rds")
+bmeta_url <- file.path('data',"bench",  "knockTF_meta_dorotheaA_new.rds")
+source_url <- file.path('data', "dorothea", "dorothea_A_new.rds")
 input_path <- file.path('data', 'networks_v2', 'network_collection_v2.rds')
-output_path <- file.path('figures', 'final_comp', 'dorotheaBench', 'sign_benchmark')
+output_path <- file.path('figures', 'final_comp', 'knockTF')
 manual_collection <- TRUE
 
 # Design contains statistical methods that take weights into account
 design_row <-
   tibble(
-    set_name = c("Dorothea_A", "Dorothea_ABC"), # name of the set resource
+    set_name = c("Dorothea_A_new", "Dorothea_ABC_new"), # name of the set resource
     bench_name = "dbd", # name of the benchmark data
     stats_list = list( # a list of the stats to call
       c(
@@ -31,9 +32,9 @@ design_row <-
       ulm = list(.mor = "mor"),
       mlm = list(.mor = "mor")
     )),
-    bexpr_loc = bexample_url, # benchmark data location
-    bmeta_loc = bmeta_url, # metadata location
-    source_loc = c(source_url, "data/dorothea/dorothea_ABC.rds"), # set source location
+    bexpr_loc = c(bexample_url, "data/bench/knockTF_expr_dorotheaABC_new.rds"), # benchmark data location
+    bmeta_loc = c(bmeta_url, "data/bench/knockTF_meta_dorotheaABC_new.rds"), # metadata location
+    source_loc = c(source_url, "data/dorothea/dorothea_ABC_new.rds"), # set source location
     source_col = "source", # source name of the gene set source
     target_col = "target", # target name of the set source'
     filter_col = "confidence", # column by which we wish to filter
@@ -43,10 +44,16 @@ design_row <-
 network_collection <- readRDS(input_path)
 
 if(manual_collection){
-  network_collection <- list(ExTRI_comparison = data.frame(path = c("data/networks_v1/ExTRI_comp_scaled_FALSE_1_evidence_TRUE.rds",
+  network_collection <- list(ExTRI_comparison = data.frame(path = c("data/networks_v1/ExTRI_comp_scaled_FALSE_1_none_TRUE.rds",
+                                                                    "data/networks_v1/ExTRI_comp_scaled_TRUE_1_none_TRUE.rds",
+                                                                    "data/networks_v1/ExTRI_comp_scaled_FALSE_1_evidence_TRUE.rds",
                                                                     "data/networks_v1/ExTRI_comp_scaled_TRUE_1_evidence_TRUE.rds",
+                                                                    "data/networks_v2/ExTRI_comp_scaled_FALSE_1_none_TRUE.rds",
+                                                                    "data/networks_v2/ExTRI_comp_scaled_TRUE_1_none_TRUE.rds",
                                                                     "data/networks_v2/ExTRI_comp_scaled_FALSE_1_evidence_TRUE.rds",
                                                                     "data/networks_v2/ExTRI_comp_scaled_TRUE_1_evidence_TRUE.rds",
+                                                                    "data/networks_dbTF_v2/ExTRI_comp_scaled_FALSE_1_none_TRUE.rds",
+                                                                    "data/networks_dbTF_v2/ExTRI_comp_scaled_TRUE_1_none_TRUE.rds",
                                                                     "data/networks_dbTF_v2/ExTRI_comp_scaled_FALSE_1_evidence_TRUE.rds",
                                                                     "data/networks_dbTF_v2/ExTRI_comp_scaled_TRUE_1_evidence_TRUE.rds")))
 }
@@ -62,14 +69,14 @@ map(names(network_collection), function(name){
                                                mutate(source_loc = networks$path[i]))
   }
   input_tibble <- input_tibble %>%
-    mutate(bexpr_loc = c("data/bench/rna_expr_dorotheaA.rds", "data/bench/rna_expr_dorotheaABC.rds",
-                        "data/bench/rna_expr_NTNUv1.rds", "data/bench/rna_expr_NTNUv1.rds",
-                        "data/bench/rna_expr_NTNUv2.rds", "data/bench/rna_expr_NTNUv2.rds",
-                        "data/bench/rna_expr_NTNUv2_dbTF.rds", "data/bench/rna_expr_NTNUv2_dbTF.rds")) %>%
-    mutate(bmeta_loc = c("data/bench/rna_meta_dorotheaA.rds", "data/bench/rna_meta_dorotheaABC.rds",
-                         "data/bench/rna_meta_NTNUv1.rds", "data/bench/rna_meta_NTNUv1.rds",
-                         "data/bench/rna_meta_NTNUv2.rds", "data/bench/rna_meta_NTNUv2.rds",
-                         "data/bench/rna_meta_NTNUv2_dbTF.rds", "data/bench/rna_meta_NTNUv2_dbTF.rds"))
+    mutate(bexpr_loc = c("data/bench/knockTF_expr_dorotheaA.rds", "data/bench/knockTF_expr_dorotheaABC.rds",
+                        "data/bench/knockTF_expr_NTNUv1.rds", "data/bench/knockTF_expr_NTNUv1.rds", "data/bench/knockTF_expr_NTNUv1.rds", "data/bench/knockTF_expr_NTNUv1.rds",
+                        "data/bench/knockTF_expr_NTNUv2.rds", "data/bench/knockTF_expr_NTNUv2.rds", "data/bench/knockTF_expr_NTNUv2.rds", "data/bench/knockTF_expr_NTNUv2.rds",
+                        "data/bench/knockTF_expr_NTNUv2_dbTF.rds", "data/bench/knockTF_expr_NTNUv2_dbTF.rds", "data/bench/knockTF_expr_NTNUv2_dbTF.rds", "data/bench/knockTF_expr_NTNUv2_dbTF.rds")) %>%
+    mutate(bmeta_loc = c("data/bench/knockTF_meta_dorotheaA.rds", "data/bench/knockTF_meta_dorotheaABC.rds",
+                         "data/bench/knockTF_meta_NTNUv1.rds", "data/bench/knockTF_meta_NTNUv1.rds", "data/bench/knockTF_meta_NTNUv1.rds", "data/bench/knockTF_meta_NTNUv1.rds",
+                         "data/bench/knockTF_meta_NTNUv2.rds", "data/bench/knockTF_meta_NTNUv2.rds", "data/bench/knockTF_meta_NTNUv2.rds", "data/bench/knockTF_meta_NTNUv2.rds",
+                         "data/bench/knockTF_meta_NTNUv2_dbTF.rds", "data/bench/knockTF_meta_NTNUv2_dbTF.rds",  "data/bench/knockTF_meta_NTNUv2_dbTF.rds",  "data/bench/knockTF_meta_NTNUv2_dbTF.rds"))
 
 
   # run decoupleRBenchmark
@@ -84,7 +91,7 @@ map(names(network_collection), function(name){
     .downsample_times = 100, # downsampling iterations
     .url_bool = FALSE # whether to load from url
   )
-
+saveRDS(estimate, paste0(output_path, "/estimate_knockTF_sign_new.rds"))
   # extract each auc per permutation run
   auc_downsampling <- lapply(estimate@bench_res$roc,
                              function(x) x %>% group_by(run) %>% summarize(raw_auc = unique(raw_auc)) %>% pull(raw_auc))

@@ -2,6 +2,7 @@ library(decoupleRBench)
 library(tidyverse)
 
 #### NTNU networks v2.0 ####
+setwd("/net/data.isilon/ag-saez/bq_smueller/NTNUdecoupleR")
 
 # Paths to benchmark data, benchmark metadata and kinase substrate network
 # Benchmark data contains 82 perturbation experiments covering 27 unique kinases
@@ -43,10 +44,16 @@ design_row <-
 network_collection <- readRDS(input_path)
 
 if(manual_collection){
-  network_collection <- list(ExTRI_comparison = data.frame(path = c("data/networks_v1/ExTRI_comp_scaled_FALSE_1_evidence_TRUE.rds",
+  network_collection <- list(ExTRI_comparison = data.frame(path = c("data/networks_v1/ExTRI_comp_scaled_FALSE_1_none_TRUE.rds",
+                                                                    "data/networks_v1/ExTRI_comp_scaled_TRUE_1_none_TRUE.rds",
+                                                                    "data/networks_v1/ExTRI_comp_scaled_FALSE_1_evidence_TRUE.rds",
                                                                     "data/networks_v1/ExTRI_comp_scaled_TRUE_1_evidence_TRUE.rds",
+                                                                    "data/networks_v2/ExTRI_comp_scaled_FALSE_1_none_TRUE.rds",
+                                                                    "data/networks_v2/ExTRI_comp_scaled_TRUE_1_none_TRUE.rds",
                                                                     "data/networks_v2/ExTRI_comp_scaled_FALSE_1_evidence_TRUE.rds",
                                                                     "data/networks_v2/ExTRI_comp_scaled_TRUE_1_evidence_TRUE.rds",
+                                                                    "data/networks_dbTF_v2/ExTRI_comp_scaled_FALSE_1_none_TRUE.rds",
+                                                                    "data/networks_dbTF_v2/ExTRI_comp_scaled_TRUE_1_none_TRUE.rds",
                                                                     "data/networks_dbTF_v2/ExTRI_comp_scaled_FALSE_1_evidence_TRUE.rds",
                                                                     "data/networks_dbTF_v2/ExTRI_comp_scaled_TRUE_1_evidence_TRUE.rds")))
 }
@@ -63,13 +70,13 @@ map(names(network_collection), function(name){
   }
   input_tibble <- input_tibble %>%
     mutate(bexpr_loc = c("data/bench/rna_expr_dorotheaA.rds", "data/bench/rna_expr_dorotheaABC.rds",
-                        "data/bench/rna_expr_NTNUv1.rds", "data/bench/rna_expr_NTNUv1.rds",
-                        "data/bench/rna_expr_NTNUv2.rds", "data/bench/rna_expr_NTNUv2.rds",
-                        "data/bench/rna_expr_NTNUv2_dbTF.rds", "data/bench/rna_expr_NTNUv2_dbTF.rds")) %>%
+                        "data/bench/rna_expr_NTNUv1.rds", "data/bench/rna_expr_NTNUv1.rds", "data/bench/rna_expr_NTNUv1.rds", "data/bench/rna_expr_NTNUv1.rds",
+                        "data/bench/rna_expr_NTNUv2.rds", "data/bench/rna_expr_NTNUv2.rds", "data/bench/rna_expr_NTNUv2.rds", "data/bench/rna_expr_NTNUv2.rds",
+                        "data/bench/rna_expr_NTNUv2_dbTF.rds", "data/bench/rna_expr_NTNUv2_dbTF.rds", "data/bench/rna_expr_NTNUv2_dbTF.rds", "data/bench/rna_expr_NTNUv2_dbTF.rds")) %>%
     mutate(bmeta_loc = c("data/bench/rna_meta_dorotheaA.rds", "data/bench/rna_meta_dorotheaABC.rds",
-                         "data/bench/rna_meta_NTNUv1.rds", "data/bench/rna_meta_NTNUv1.rds",
-                         "data/bench/rna_meta_NTNUv2.rds", "data/bench/rna_meta_NTNUv2.rds",
-                         "data/bench/rna_meta_NTNUv2_dbTF.rds", "data/bench/rna_meta_NTNUv2_dbTF.rds"))
+                         "data/bench/rna_meta_NTNUv1.rds", "data/bench/rna_meta_NTNUv1.rds", "data/bench/rna_meta_NTNUv1.rds", "data/bench/rna_meta_NTNUv1.rds",
+                         "data/bench/rna_meta_NTNUv2.rds", "data/bench/rna_meta_NTNUv2.rds", "data/bench/rna_meta_NTNUv2.rds", "data/bench/rna_meta_NTNUv2.rds",
+                         "data/bench/rna_meta_NTNUv2_dbTF.rds", "data/bench/rna_meta_NTNUv2_dbTF.rds", "data/bench/rna_meta_NTNUv2_dbTF.rds", "data/bench/rna_meta_NTNUv2_dbTF.rds"))
 
 
   # run decoupleRBenchmark
@@ -85,6 +92,7 @@ map(names(network_collection), function(name){
     .url_bool = FALSE # whether to load from url
   )
 
+  saveRDS(estimate, file = paste0(output_path, "/estimate_dorothea_sign.rds"))
   # extract each auc per permutation run
   auc_downsampling <- lapply(estimate@bench_res$roc,
                              function(x) x %>% group_by(run) %>% summarize(raw_auc = unique(raw_auc)) %>% pull(raw_auc))
@@ -106,6 +114,7 @@ map(names(network_collection), function(name){
                                      group_by(network) %>%
                                      summarise(mean = mean(auc)) %>% arrange(mean) %>% pull(network))
 
+  saveRDS(boxplot_tibble, file = paste0(output_path, "/boxplot_tibble_dorothea_sign.rds"))
 
   auc <- ggplot(boxplot_tibble,aes(fill = network, x = statistic, y = auc)) +
     geom_boxplot() + theme_grey(base_size = 14)

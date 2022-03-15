@@ -6,11 +6,11 @@ library(tidyverse)
 # Paths to benchmark data, benchmark metadata and kinase substrate network
 # Benchmark data contains 82 perturbation experiments covering 27 unique kinases
 # Network contains 92 kinases with regulon size of 57 ± 86
-bexample_url <- file.path('data',"bench", "rna_expr_dorotheaA.rds")
-bmeta_url <- file.path('data',"bench",  "rna_meta_dorotheaA.rds")
+bexample_url <- file.path('data',"bench", "knockTF_expr_dorotheaA.rds")
+bmeta_url <- file.path('data',"bench",  "knockTF_meta_dorotheaA.rds")
 source_url <- file.path('data', "dorothea", "dorothea_A.rds")
 input_path <- file.path('data', 'networks_v2', 'network_collection_v2.rds')
-output_path <- file.path('figures', 'final_comp', 'dorotheaBench', 'sign_benchmark')
+output_path <- file.path('figures', 'final_comp', 'knockTF')
 manual_collection <- TRUE
 
 # Design contains statistical methods that take weights into account
@@ -62,14 +62,14 @@ map(names(network_collection), function(name){
                                                mutate(source_loc = networks$path[i]))
   }
   input_tibble <- input_tibble %>%
-    mutate(bexpr_loc = c("data/bench/rna_expr_dorotheaA.rds", "data/bench/rna_expr_dorotheaABC.rds",
-                        "data/bench/rna_expr_NTNUv1.rds", "data/bench/rna_expr_NTNUv1.rds",
-                        "data/bench/rna_expr_NTNUv2.rds", "data/bench/rna_expr_NTNUv2.rds",
-                        "data/bench/rna_expr_NTNUv2_dbTF.rds", "data/bench/rna_expr_NTNUv2_dbTF.rds")) %>%
-    mutate(bmeta_loc = c("data/bench/rna_meta_dorotheaA.rds", "data/bench/rna_meta_dorotheaABC.rds",
-                         "data/bench/rna_meta_NTNUv1.rds", "data/bench/rna_meta_NTNUv1.rds",
-                         "data/bench/rna_meta_NTNUv2.rds", "data/bench/rna_meta_NTNUv2.rds",
-                         "data/bench/rna_meta_NTNUv2_dbTF.rds", "data/bench/rna_meta_NTNUv2_dbTF.rds"))
+    mutate(bexpr_loc = c("data/bench/knockTF_expr_dorotheaA.rds", "data/bench/knockTF_expr_dorotheaABC.rds",
+                        "data/bench/knockTF_expr_NTNUv1.rds", "data/bench/knockTF_expr_NTNUv1.rds",
+                        "data/bench/knockTF_expr_NTNUv2.rds", "data/bench/knockTF_expr_NTNUv2.rds",
+                        "data/bench/knockTF_expr_NTNUv2_dbTF.rds", "data/bench/knockTF_expr_NTNUv2_dbTF.rds")) %>%
+    mutate(bmeta_loc = c("data/bench/knockTF_meta_dorotheaA.rds", "data/bench/knockTF_meta_dorotheaABC.rds",
+                         "data/bench/knockTF_meta_NTNUv1.rds", "data/bench/knockTF_meta_NTNUv1.rds",
+                         "data/bench/knockTF_meta_NTNUv2.rds", "data/bench/knockTF_meta_NTNUv2.rds",
+                         "data/bench/knockTF_meta_NTNUv2_dbTF.rds", "data/bench/knockTF_meta_NTNUv2_dbTF.rds"))
 
 
   # run decoupleRBenchmark

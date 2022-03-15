@@ -1,15 +1,19 @@
 library(tidyverse)
 source("code/constructNetwork_function.R")
 
+input_path <- 'data/homogenized_ressource_ExTRI.csv'
+output_folder <- "data/networks_v1/"
+
 #### NTNU v2.0, ExTRI ####
 # Construct different networks for ExTri data
 # First we load the GRN curation tables. GRNcuration_ExTRI_tot just contains the information for the total number of evidence but not the information for each resource separately. Here the duplicated pubmed IDs between resources are just count once.
 # The GRNcuration_ExTRI contains the information per resource in addition to the sum. If different ressources take their information from the same pubmed ID this is counted multiple times. The advantage is that we can scale the information for each resource.
-GRNcuration_ExTRI_tot <- read.table('data/evidence_counts_ExTRI_pairs.tsv', sep = "\t", header=FALSE) %>%
-  rename(TF.TG = V1, totPositive = V2, totNeg = V3, totUnknown = V4) %>%
-  column_to_rownames(var = "TF.TG")
 
-GRNcuration_ExTRI <- read.csv('data/homogenized_ressource_ExTRI.csv') %>%
+# GRNcuration_ExTRI_tot <- read.table('data/evidence_counts_ExTRI_pairs.tsv', sep = "\t", header=FALSE) %>%
+#   rename(TF.TG = V1, totPositive = V2, totNeg = V3, totUnknown = V4) %>%
+#   column_to_rownames(var = "TF.TG")
+
+GRNcuration_ExTRI <- read.csv(input_path) %>%
   column_to_rownames(var = "TF.TG")
 
 # To test the effect of ExTRI that information is removed from the table.
@@ -35,12 +39,12 @@ networks_sign <- tibble(GRNcuration = list(GRNcuration_ExTRI),
                            weight = "evidence",
                            rm_bidirectional_rows = TRUE)
 
-networks_tot <- tibble(GRNcuration = list(GRNcuration_ExTRI_tot),
-                           curated_counts = "standard",
-                           mor = c(FALSE, TRUE, FALSE, TRUE),
-                           mor_filter = 1,
-                           weight = c("none", "none", "evidence_tot", "evidence_tot"),
-                           rm_bidirectional_rows = TRUE)
+# networks_tot <- tibble(GRNcuration = list(GRNcuration_ExTRI_tot),
+#                            curated_counts = "standard",
+#                            mor = c(FALSE, TRUE, FALSE, TRUE),
+#                            mor_filter = 1,
+#                            weight = c("none", "none", "evidence_tot", "evidence_tot"),
+#                            rm_bidirectional_rows = TRUE)
 
 networks_comparison <- tibble(GRNcuration = list(GRNcuration_ExTRI),
                              curated_counts = "scaled",
@@ -53,17 +57,17 @@ networks_comparison_unrestricted <- networks_comparison %>% mutate(rm_bidirectio
 
 network_collection <- list(ExTRI_weights = networks_weights,
                            ExTRI_sign = networks_sign,
-                           ExTRI_tot_comp = networks_tot,
+                           #ExTRI_tot_comp = networks_tot,
                            ExTRI_comp = networks_comparison,
                            ExTRI_comp_unrestricted = networks_comparison_unrestricted)
 
 for (network in names(network_collection)){
-    network_collection[[network]] <- network_collection[[network]] %>% add_column(path = paste0("data/", paste(network, network_collection[[network]]$curated_counts,
+    network_collection[[network]] <- network_collection[[network]] %>% add_column(path = paste0(output_folder, paste(network, network_collection[[network]]$curated_counts,
                                                                                                                network_collection[[network]]$mor, network_collection[[network]]$mor_filter,
                                                                                                                network_collection[[network]]$weight, network_collection[[network]]$rm_bidirectional_rows, sep = "_"), ".rds"))
 }
 
-saveRDS(network_collection, "data/network_collection.rds")
+saveRDS(network_collection, paste0(output_folder, "network_collection_v1.rds"))
 
 # construct networks from the data.frames. the network within the constructNetwork function needs to be changed manually at the moment.
 network_size <- map(names(network_collection), function(network){
@@ -85,10 +89,10 @@ network_size <- map(names(network_collection), function(network){
 })
 
 network_size <- as.data.frame(do.call(rbind, network_size))
-network_size <- network_size %>% mutate(network = str_remove(str_remove(network_size$network, ".rds"), "data/")) %>%
+network_size <- network_size %>% mutate(network = str_remove(str_remove(network_size$network, ".rds"), output_folder)) %>%
   add_row(network = "Dorothea_A", edges = "5378", TF = "94")
 
-write_csv(network_size, "data/network_size.csv")
+write_csv(network_size, paste0(output_folder, "network_size.csv"))
 
 #### Dorothea ####
 # Construct different networks from dorothea

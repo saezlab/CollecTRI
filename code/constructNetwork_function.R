@@ -95,6 +95,8 @@ constructNetwork <- function(GRNcuration, curated_counts = "standard", mor = TRU
     GRN <- GRN %>% select(-likelihood) %>% add_column(likelihood)
   }
 
+  GRN <- GRN %>% mutate(mor = mor*likelihood) %>% mutate(likelihood = 1) # new decoupler has likelihood in mor
+
   return(GRN)
 
 }

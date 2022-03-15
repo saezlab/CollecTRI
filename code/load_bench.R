@@ -52,4 +52,3 @@ knockTF_exp <- knockTF_exp[, colnames(knockTF_exp) %in% knockTF_meta$id]
 # Save
 saveRDS(rna_expr, paste0(path, '/knockTF_expr_', network_name,'.rds'))
 saveRDS(rna_meta, paste0(path, '/knockTF_meta_', network_name, '.rds'))
-
