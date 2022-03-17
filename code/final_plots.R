@@ -65,7 +65,7 @@ get_auc_scatter <- function(df){
 
 # Read
 rna_result <- readRDS(file.path('output', 'estimate_dorothea_sign.rds'))@bench_res
-knockTF_result <- readRDS(file.path('output','estimate_knockTF_abs.rds'))@bench_res
+knockTF_result <- readRDS(file.path('output','estimate_knockTF_sign_new.rds'))@bench_res
 
 rna_result <- rna_result %>% filter(statistic == "consensus")
 rna_result$set_name <- c("Dorothea A", "Dorothea ABC",
@@ -78,6 +78,11 @@ knockTF_result$set_name <- c("Dorothea A", "Dorothea ABC",
                              "NTNU.2 dbTF w", "NTNU.2 dbTF", "NTNU.2 dbTF w+s", "NTNU.2 dbTF s",
                              "NTNU.1 w", "NTNU.1", "NTNU.1 w+s", "NTNU.1 s",
                              "NTNU.2 w", "NTNU.2", "NTNU.2 w+s", "NTNU.2 s")
+
+#knockTF_result$set_name <- c("Dorothea A", "Dorothea ABC",
+#                             "NTNU.2 0", "NTNU.2 0.1", "NTNU.2 0.2", "NTNU.2 0.3",
+#                             "NTNU.2 0.4", "NTNU.2 0.5", "NTNU.2 0.6", "NTNU.2 0.7",
+#                             "NTNU.2 0.8", "NTNU.2 0.9", "NTNU.2 1")
 
 # Generate data-frames
 rna_roc_df <- get_auc_df(rna_result, roc)
@@ -112,49 +117,76 @@ pdf(file = file.path(path_figs, 'dorothea_bench_sign.pdf'),
   plot_annotation(tag_levels = 'A', title = "Dorothea bench")
 dev.off()
 
-pdf(file = file.path(path_figs, 'knockTF_bench_abs.pdf'),
-    width = 10, # The width of the plot in inches
-    height = 10) # The height of the plot in inches
+pdf(file = file.path(path_figs, 'knockTF_bench_sign_new.pdf'),
+    width = 7.5, # The width of the plot in inches
+    height = 7) # The height of the plot in inches
 ((knockTF_roc_boxp / knockTF_prc_boxp) | knockTF_auc_scatt)  +
   plot_layout(guides = 'collect', widths = c(1, 2))  +
   plot_annotation(tag_levels = 'A', title = "knockTF bench")
 dev.off()
 
-# Test significance best methods
-rna_auc <- rna_roc_df %>%
-  left_join(rna_prc_df)
-knockTF_auc <- knockTF_roc_df %>%
-  left_join(knockTF_prc_df)
-all_auc_df <- bind_rows(rna_auc, knockTF_auc) %>%
-  pivot_longer(cols=c(roc, prc)) %>%
-  select(-name)
+# Test bias of methods
+path_networks <- c(dorothea_A = "data/dorothea/dorothea_A_new.rds",
+                   dorothea_ABC = "data/dorothea/dorothea_ABC_new.rds",
+                   v1_weighted = "data/networks_v1/ExTRI_comp_scaled_FALSE_1_evidence_TRUE.rds",
+                   v1_weighted_signed = "data/networks_v1/ExTRI_comp_scaled_TRUE_1_evidence_TRUE.rds",
+                   v1 = "data/networks_v1/ExTRI_comp_scaled_FALSE_1_none_TRUE.rds",
+                   v1_signed = "data/networks_v1/ExTRI_comp_scaled_TRUE_1_none_TRUE.rds",
+                   v2_weighted = "data/networks_v2/ExTRI_comp_scaled_FALSE_1_evidence_TRUE.rds",
+                   v2_weighted_signed = "data/networks_v2/ExTRI_comp_scaled_TRUE_1_evidence_TRUE.rds",
+                   v2 = "data/networks_v2/ExTRI_comp_scaled_FALSE_1_none_TRUE.rds",
+                   v2_signed = "data/networks_v2/ExTRI_comp_scaled_TRUE_1_none_TRUE.rds",
+                   v2_dbTF_weighted = "data/networks_dbTF_v2/ExTRI_comp_scaled_FALSE_1_evidence_TRUE.rds",
+                   v2_dbTF_weighted_signed = "data/networks_dbTF_v2/ExTRI_comp_scaled_TRUE_1_evidence_TRUE.rds",
+                   v2_dbTF = "data/networks_dbTF_v2/ExTRI_comp_scaled_FALSE_1_none_TRUE.rds",
+                   v2_dbTF_signed = "data/networks_dbTF_v2/ExTRI_comp_scaled_TRUE_1_none_TRUE.rds")
 
-median_auc <- all_auc_df %>%
-  group_by(set_name) %>%
-  summarise(median_auc = median(value)) %>%
-  arrange(median_auc)
+final_networks <- map(path_networks, readRDS)
+names(final_networks) <- names(decoupler_act) <- c("Dorothea A", "Dorothea ABC",
+                                                   "NTNU.1 w", "NTNU.1 w+s", "NTNU.1", "NTNU.1 s",
+                                                   "NTNU.2 w", "NTNU.2 w+s", "NTNU.2", "NTNU.2 s",
+                                                   "NTNU.2 dbTF w", "NTNU.2 dbTF w+s", "NTNU.2 dbTF", "NTNU.2 dbTF s")
 
-methods_df <- all_auc_df %>%
-  group_by(set_name) %>%
-  group_split() %>%
-  map(function(df){
-    meth <- unique(df$set_name)
-    other_meth <- all_auc_df %>%
-      filter(set_name != meth)
-    test <- wilcox.test(df$value, other_meth$value, alternative = "g")
-    p_value <- formatC(test$p.value, format = "e", digits = 2)
-    W <- formatC(unname(test$set_name), format = "e", digits = 2)
-    N <- formatC(length(df$value) + length(other_meth$value), format = "e", digits = 2)
-    tibble(set_name = meth, p_value = p_value, W=W, N=N)
-  }) %>%
-  bind_rows() %>%
-  left_join(median_auc) %>%
-  mutate(median_auc = round(median_auc, digits = 2)) %>%
-  mutate(p_value = p.adjust(p_value, method='fdr')) %>%
-  arrange(p_value, -median_auc)
+decoupler_act <- readRDS("output/decoupler_act.rds")
+decoupler_act <- decoupler_act[c(5,6,3,4,9,10,7,8,13,14,11,12,1,2)]
 
-print(paste0('Best performing methods: ',
-             paste0(pluck(filter(methods_df, p_value < 0.05), 'set_name'),
-                    collapse=', ')))
+corr_plot_list <- map(names(decoupler_act), function(name_act){
+  act_net <- decoupler_act[[name_act]]
+  ggplot(act_net, aes(abs(score), Freq)) +
+    geom_point() +
+    ggtitle(paste0(name_act, " Pearson correlation = ", round(cor(abs(act_net$score), act_net$Freq), digits = 3))) +
+    theme(text = element_text(size=14)) +
+    xlab('Absolute TF activity score') +
+    ylab('Regulon size') +
+    theme_bw()
+})
 
-write.csv(methods_df, file.path(path_figs, 'supp_tab_2.csv'), row.names=F)
+pdf(file = file.path(path_figs, 'corr_regulon_size.pdf'),
+        width = 7.5, # The width of the plot in inches
+        height = 9)
+cowplot::plot_grid(plotlist = corr_plot_list, ncol = 4)
+dev.off()
+
+weighted_results <- decoupler_act[c(3,7,11,14)]
+mor_corr_plot_list <- map(names(weighted_results), function(net_name){
+  act_res <- weighted_results[[net_name]]
+  net <- final_networks[[net_name]]
+  mean_mor <- net %>% group_by(source) %>% summarise(mean_mor = mean(abs(mor)))
+
+  act_res_mor <- left_join(act_res, mean_mor)
+
+  ggplot(act_res_mor, aes(abs(score), mean_mor)) +
+    geom_point() +
+    ggtitle(paste0(net_name, " Pearson correlation = ", round(cor(abs(act_res_mor$score), act_res_mor$mean_mor), digits = 3))) +
+    theme(text = element_text(size=14)) +
+    xlab('Absolute TF activity score') +
+    ylab('Mean mode of regulation') +
+    theme_bw()
+})
+
+pdf(file = file.path(path_figs, 'corr_mean_mor.pdf'),
+    width = 7.5, # The width of the plot in inches
+    height = 9)
+cowplot::plot_grid(plotlist = mor_corr_plot_list, ncol = 2)
+dev.off()
+
