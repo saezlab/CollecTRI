@@ -6,16 +6,16 @@ library(patchwork)
 # final networks
 path_networks <- c(dorothea_A = "data/dorothea/dorothea_A_new.rds",
                    dorothea_ABC = "data/dorothea/dorothea_ABC_new.rds",
-                   v1_weighted = "data/networks_v1/ExTRI_comp_scaled_FALSE_1_evidence_TRUE.rds",
-                   v1_weighted_signed = "data/networks_v1/ExTRI_comp_scaled_TRUE_1_evidence_TRUE.rds",
-                   v2_weighted = "data/networks_v2/ExTRI_comp_scaled_FALSE_1_evidence_TRUE.rds",
-                   v2_weighted_signed = "data/networks_v2/ExTRI_comp_scaled_TRUE_1_evidence_TRUE.rds",
-                   v2_dbTF_weighted = "data/networks_dbTF_v2/ExTRI_comp_scaled_FALSE_1_evidence_TRUE.rds",
-                   v2_dbTF_weighted_signed = "data/networks_dbTF_v2/ExTRI_comp_scaled_TRUE_1_evidence_TRUE.rds")
+                   v1_weighted = "data/networks_v1/ExTRI_comp_scaled_FALSE_1_evidence_FALSE.rds",
+                   v1_weighted_signed = "data/networks_v1/ExTRI_comp_scaled_TRUE_1_evidence_FALSE.rds",
+                   v2_weighted = "data/networks_v2/ExTRI_comp_scaled_FALSE_0.8_evidence_FALSE.rds",
+                   v2_weighted_signed = "data/networks_v2/ExTRI_comp_scaled_TRUE_0.8_evidence_FALSE.rds",
+                   v2_dbTF_weighted = "data/networks_dbTF_v2/ExTRI_comp_scaled_FALSE_0.8_evidence_FALSE.rds",
+                   v2_dbTF_weighted_signed = "data/networks_dbTF_v2/ExTRI_comp_scaled_TRUE_0.8_evidence_FALSE.rds")
 
 final_networks <- map(path_networks, readRDS)
 bmeta_knockTF <- readRDS(file.path('data',"bench", "knockTF_meta.rds"))
-bexpr_knockTF <-  readRDS(file.path('data',"bench", "knockTF_expr.rds"))
+bexpr_knockTF <-  readRDS(file.path('data',"bench", "knockTF_exp.rds"))
 bmeta_rna <- readRDS(file.path('data',"bench", "rna_meta.rds"))
 bexpr_rna <-  readRDS(file.path('data',"bench", "rna_expr.rds"))
 

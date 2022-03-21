@@ -11,7 +11,7 @@ bexample_url <- file.path('data',"bench", "knockTF_expr_dorotheaA_new.rds")
 bmeta_url <- file.path('data',"bench",  "knockTF_meta_dorotheaA_new.rds")
 source_url <- file.path('data', "dorothea", "dorothea_A_new.rds")
 input_path <- file.path('data', 'networks_v2', 'network_collection_v2.rds')
-output_path <- file.path('figures', 'final_comp', 'knockTF')
+output_path <- file.path('output')
 
 # Design contains statistical methods that take weights into account
 design_row <-
@@ -52,8 +52,8 @@ for (i in 1:nrow(networks)){
                                              mutate(source_loc = networks$path[i]))
 }
 
-knockTF_exp_net <- rep("data/bench/knockTF_expr_NTNUv2.rds", nrow(input_tibble)-2)
-knockTF_meta_net <- rep("data/bench/knockTF_meta_NTNUv2.rds", nrow(input_tibble)-2)
+knockTF_exp_net <- rep("data/bench/knockTF_expr_NTNU_v2.rds", nrow(input_tibble)-2)
+knockTF_meta_net <- rep("data/bench/knockTF_meta_NTNU_v2.rds", nrow(input_tibble)-2)
 
 input_tibble <- input_tibble %>%
   mutate(bexpr_loc = c(input_tibble$bexpr_loc[1:2], knockTF_exp_net)) %>%
@@ -72,4 +72,4 @@ estimate <- run_benchmark(
   .downsample_times = 100, # downsampling iterations
   .url_bool = FALSE # whether to load from url
 )
-saveRDS(estimate, paste0(output_path, "/estimate_knockTF_sign_new.rds"))
+saveRDS(estimate@bench_res, paste0(output_path, "/estimate_knockTF_test_sign_th.rds"))

@@ -31,7 +31,8 @@ constructNetwork <- function(GRNcuration, curated_counts = "standard", mor = TRU
       add_column(totUnknown = rowSums(GRNcuration[,grepl( "Unknown", colnames(GRNcuration), fixed = TRUE)]))
   } else if (curated_counts == "scaled"){
     GRNcuration <- select(GRNcuration, -totNeg,-totPositive,-totUnknown)
-    GRNcuration <- apply(GRNcuration,2,function(x){x/max(x)}) %>% replace_na(0) %>% as.data.frame()
+    GRNcuration <- apply(GRNcuration,2,function(x){x/max(x)}) %>% as.data.frame()
+    GRNcuration[is.na(GRNcuration)] <- 0
     GRNcuration <- GRNcuration %>% add_column(totNeg = rowSums(GRNcuration[,grepl( "Negative", colnames(GRNcuration), fixed = TRUE)])) %>%
       add_column(totPositive = rowSums(GRNcuration[,grepl( "Positive", colnames(GRNcuration), fixed = TRUE)])) %>%
       add_column(totUnknown = rowSums(GRNcuration[,grepl( "Unknown", colnames(GRNcuration), fixed = TRUE)]))

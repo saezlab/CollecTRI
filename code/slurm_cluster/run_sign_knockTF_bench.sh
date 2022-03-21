@@ -1,12 +1,14 @@
 #!/bin/bash
-
-#SBATCH --job-name=knockTFsign
-#SBATCH -t 20:00:00
-#SBATCH -n 4
-#SBATCH -p multi
-#SBATCH -N 4
-#SBATCH --output knockTF_sign.out
-#SBATCH --error knockTF_sign.err
+#SBATCH -p single
+#SBATCH -N 1
+#SBATCH --time=30:00:00
+#SBATCH --mem=100000
+#SBATCH --job-name="knockTF_test_sign"
+#SBATCH --output=knockTF_test_sign.out
+#SBATCH --mail-user=sophia.mueller-dott@uni-heidelberg.de
+#SBATCH --mail-type=ALL
+#SBATCH --requeue
+#SBATCH --cpus-per-task 64
 
 source ~/.bashrc
 conda activate /net/data.isilon/ag-saez/bq_smueller/SOFTWARE/miniconda3/envs/decoupleR
