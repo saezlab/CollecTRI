@@ -13,7 +13,7 @@
 #'
 #' @export
 
-constructNetwork <- function(GRNcuration, curated_counts = "standard", mor = TRUE, mor_filter = NULL, weight = "none", rm_bidirectional_rows = TRUE){
+constructNetwork <- function(GRNcuration, curated_counts = "standard", mor = TRUE, mor_filter = NULL, weight = "none", rm_no_sign_rows = TRUE){
   # add up counts for each resource independent of the regulation
   resources <- unique(str_remove(str_remove(str_remove(colnames(GRNcuration), "_Positive"), "_Negative"), "_Unknown"))
   resources <- resources[1:(length(resources)-3)]
@@ -38,13 +38,13 @@ constructNetwork <- function(GRNcuration, curated_counts = "standard", mor = TRU
       add_column(totUnknown = rowSums(GRNcuration[,grepl( "Unknown", colnames(GRNcuration), fixed = TRUE)]))
   }
 
-  if (rm_bidirectional_rows){
+  if (rm_no_sign_rows){
     # remove rows with no information about direction at all
     GRNcuration <- GRNcuration %>% dplyr::filter(rowSums(GRNcuration[c("totNeg", "totPositive")]) > 0)
 
-    # remove rows with same information for positive and negative
-    nrow(GRNcuration %>% dplyr::filter(GRNcuration$totNeg == GRNcuration$totPositive)) # number of connections lost
-    GRNcuration <- GRNcuration %>% dplyr::filter(!GRNcuration$totNeg == GRNcuration$totPositive)
+    # remove rows with same information for positive and negative (no longer relevant due to threshold)
+    #nrow(GRNcuration %>% dplyr::filter(GRNcuration$totNeg == GRNcuration$totPositive)) # number of connections lost
+    #GRNcuration <- GRNcuration %>% dplyr::filter(!GRNcuration$totNeg == GRNcuration$totPositive)
   }
 
 
@@ -63,11 +63,13 @@ constructNetwork <- function(GRNcuration, curated_counts = "standard", mor = TRU
   ## Change mode of reaction
   if (mor) {
     morEvidence <- GRNcuration %>% select(c("totNeg","totPositive")) %>% max.col()
+    morEvidence[GRNcuration$totNeg ==  GRNcuration$totPositive] <- 2
     if (is.numeric(mor_filter)){
       ratio <- GRNcuration %>% rowwise() %>% mutate(weight = max(c(totNeg, totPositive))/sum(c(totNeg, totPositive))) %>% pull(weight)
       mor <- morEvidence %>% replace(morEvidence == 1, -1) %>% replace(morEvidence == 2, 1)
       morRatio <- data.frame(mor = mor,
                             ratio = ratio)
+      morRatio$ratio[is.na(morRatio$ratio)] <- 0
       mor <- morRatio %>% mutate(mor = replace(mor, morRatio$ratio < mor_filter, 1)) %>% pull(mor)
       GRN <- GRN %>% select(-mor) %>% add_column(mor)
     } else {
