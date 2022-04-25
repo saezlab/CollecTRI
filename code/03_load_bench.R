@@ -3,8 +3,8 @@ knockTF <- read.table("data/differential expression of genes in all datasets.txt
                       sep = "\t", header = T)
 
 path <- file.path('data','bench')
-network_name <- "dorotheaA_new"
-network_path <- "data/dorothea/dorothea_A_new.rds"
+network_name <- "dorotheaABC_new"
+network_path <- "data/dorothea/dorothea_ABC_new.rds"
 
 
 knockTF_exp <- knockTF %>%
@@ -24,7 +24,8 @@ saveRDS(knockTF_meta, file.path(path, "knockTF_meta.rds"))
 
 # Filter by overlap of TFs
 network <- readRDS(file.path(network_path))
-tfs <- network$source
+network <- network %>% filter(target %in% rownames(knockTF_exp))
+tfs <- table(network$source) %>% as.data.frame() %>% filter(Freq > 4) %>% pull(Var1)
 knockTF_meta <- dplyr::filter(knockTF_meta, target %in% tfs)
 knockTF_exp <- knockTF_exp[, colnames(knockTF_exp) %in% knockTF_meta$id]
 
@@ -45,9 +46,11 @@ get_rna_data <- function(path){
   rna_expr <- readRDS(file.path(path, 'rna_expr.rds'))
   rna_meta <- readRDS(file.path(path, 'rna_meta.rds'))
   network <- readRDS(file.path(network_path))
-  tfs <- network$source
+  network <- network %>% filter(target %in% rownames(rna_expr))
+  tfs <- table(network$source) %>% as.data.frame() %>% filter(Freq > 4) %>% pull(Var1) %>% as.character()
   rna_meta <- dplyr::filter(rna_meta, target %in% tfs)
-  rna_expr <- rna_expr[, colnames(rna_expr) %in% rna_meta$id]
+  rna_expr <- rna_expr[, colnames(rna_expr) %in% rna_meta$id] %>%
+    as.matrix()
 
   # Save
   saveRDS(rna_expr, paste0(path, '/rna_expr_', network_name,'.rds'))
