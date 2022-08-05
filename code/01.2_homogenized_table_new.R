@@ -83,15 +83,16 @@ get_homogenized_table <- function(collecTRI.raw){
     final_TF.TG <- table_TF.TG %>%
       mutate(Sign = case_when(
         activation >= 1 & repression == 0 ~ "activation",
-        activation == 0 & repression >= 1 ~ "repression"
+        activation == 0 & repression >= 1 ~ "repression",
+        activation >= 1 & repression >= 1 ~ "activation+repression"
       ))
 
     final_TF.TG$Sign[is.na(final_TF.TG$Sign)] <- "unknown"
 
     # create final data frame with number of unique PMID for activation, repression
     # and unknown + all PMIDs
-    data.frame(activation = sum(final_TF.TG$Sign == "activation"),
-               repression = sum(final_TF.TG$Sign == "repression"),
+    data.frame(activation = sum(str_detect(final_TF.TG$Sign, "activation")),
+               repression = sum(str_detect(final_TF.TG$Sign, "repression")),
                unknown = sum(final_TF.TG$Sign == "unknown"),
                PMID = paste(rownames(final_TF.TG), collapse = ","))
     })
