@@ -23,7 +23,7 @@ We need TF motifs and Promoter Sequence to calculate the binding affinities usin
 
 These are all connections in CollecTRI
 ```{r}
-GRN <- read.csv("output/signed_CollecTRI_dbTF_040722.csv") %>%
+GRN <- read.csv("output/040722/signed_CollecTRI_dbTF_040722.csv") %>%
   mutate(TF = map_chr(str_split(TF.TG, ":"), 1),
          TG = map_chr(str_split(TF.TG, ":"), 2))
 ```
@@ -229,13 +229,13 @@ GRN_prob <- map_dfr(1:nrow(GRN), function(j){
 
 GRN_prob$bind_aff.mean[is.infinite(GRN_prob$bind_aff.mean)] <- NA
 
-saveRDS(GRN_prob, "output/binding_affinities_matrixRider.rds")
+saveRDS(GRN_prob, "output/040722/binding_affinities_matrixRider_dbTF.rds")
 ```
 
 ### Scaling
 Edges where either the TF motif or the sequence and all edges with a binding score lower than zero were removed. The weights were then scaled to be between 0 and 1. 
 ```{r}
-GRN_prob <- readRDS("output/binding_affinities_matrixRider.rds")
+GRN_prob <- readRDS("output/040722/binding_affinities_matrixRider_dbTF.rds")
 
 TF_weights <- GRN_prob %>%
   filter(!is.na(bind_aff.mean)) %>%
@@ -251,7 +251,11 @@ dist_weight_tf_p <- ggplot(TF_weights,aes(x = mean_weight)) + geom_density()
 GRN_prob_filter <- GRN_prob %>%
   filter(!is.na(bind_aff.mean)) %>%
   filter(!bind_aff.mean <= 0)
+```
 
+
+
+```{r}
 GRN_scaled <- map_dfr(unique(GRN_prob_filter$TF), function(tf){
   GRN_tf <- GRN_prob_filter %>% dplyr::filter(TF == tf)
 
@@ -287,6 +291,8 @@ ggplot(test, aes(x=mean_weiht, y=log(n))) +
 
 cor(test$mean_weiht, test$n, method = "spearman")
 head(GRN_final)
+
+write_csv(GRN_final, "output/040722/GRN_weighted_040722.csv")
 ```
 
 
@@ -322,3 +328,38 @@ dist_weight_scaled_p
 dist_weight_scaled_tf_p
 ```
 
+
+## Probabilities for filtering
+```{r}
+GRN_tmp <- GRN_prob %>%
+  filter(!is.na(bind_aff.mean))
+
+quan_10 <- quantile(GRN_tmp$bind_aff.mean, probs = c(0.10), na.rm = T)
+quan_20 <- quantile(GRN_tmp$bind_aff.mean, probs = c(0.20), na.rm = T)
+quan_30 <- quantile(GRN_tmp$bind_aff.mean, probs = c(0.30), na.rm = T)
+quan_40 <- quantile(GRN_tmp$bind_aff.mean, probs = c(0.40), na.rm = T)
+quan_50 <- quantile(GRN_tmp$bind_aff.mean, probs = c(0.50), na.rm = T)
+
+quantiles <- c(quan_10, quan_20, quan_30, quan_40, quan_50)
+map(names(quantiles), function(q_n){
+  q <- quantiles[q_n]
+  GRN_quant <- GRN_tmp %>%
+  filter(bind_aff.mean >= q) %>%
+  left_join(GRN, by = c("TF", "TG")) %>%
+  rename(c("weight" = "sign", "source" = "TF", "target" = "TG")) %>%
+  mutate(confidence = "A") %>%
+  dplyr::select(c(source, confidence, target, weight))
+  
+  write_csv(GRN_quant, file = paste0("output/040722/filter_dbTF/collecTRI_", q_n, ".csv"))
+  
+  edges_rm <- sum(!GRN_tmp$bind_aff.mean >= q)
+  GRN_quant_random <- GRN_tmp[-sample(1:nrow(GRN_tmp), edges_rm), ] %>%
+  left_join(GRN, by = c("TF", "TG")) %>%
+  rename(c("weight" = "sign", "source" = "TF", "target" = "TG")) %>%
+  mutate(confidence = "A") %>%
+  dplyr::select(c(source, confidence, target, weight))
+  
+  write_csv(GRN_quant_random, file = paste0("output/040722/filter_dbTF/collecTRI_", q_n, "_random.csv"))
+})
+
+```

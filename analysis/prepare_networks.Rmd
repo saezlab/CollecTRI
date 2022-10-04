@@ -1,0 +1,92 @@
+---
+title: "Prepare networks"
+author: "Sophia Müller-Dott"
+date: '2022-10-04'
+output: html_document
+---
+
+## Libraries
+```{r setup, message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+
+## Save networks
+We will now save all the networks in the right format to run with decoupler.
+
+```{r}
+file_names <- list.files("output/040722", pattern = ".csv", full.names = T)
+
+file_names_dbTF <- file_names[str_detect(file_names, "dbTF")]
+file_names_allTF <- file_names[!str_detect(file_names, "dbTF")]
+```
+
+### dbTF
+```{r}
+signed_collecTRI_dbTF <- read_csv(file_names_dbTF[str_detect(file_names_dbTF, "sign")]) %>%
+ mutate(source = map_chr(str_split(TF.TG, ":"), 1),
+        target = map_chr(str_split(TF.TG, ":"), 2))%>% 
+  mutate(confidence = "A") %>%
+  rename("weight" = "sign") %>%
+  dplyr::select(c(source, confidence, target, weight))
+
+agnostic_collecTRI_dbTF <- signed_collecTRI_dbTF %>%
+  mutate(weight = abs(weight))
+
+write_csv(signed_collecTRI_dbTF, "output/040722/final_dbTF/signed_collecTRI.csv")
+write_csv(agnostic_collecTRI_dbTF, "output/040722/final_dbTF/agnostic_collecTRI.csv")
+
+rest_signed_weighted_collecTRI_dbTF  <- read_csv(file_names_dbTF[str_detect(file_names_dbTF, "weight")]) %>%
+  mutate(confidence = "A") %>%
+  dplyr::select(c(source, confidence, target, weight))
+rest_agnostic_collecTRI_dbTF <- rest_signed_weighted_collecTRI_dbTF %>%
+  mutate(weight = 1)
+rest_signed_collecTRI_dbTF <- rest_signed_weighted_collecTRI_dbTF %>%
+  mutate(weight = case_when(
+    weight > 0 ~ 1,
+    weight < 0 ~-1
+  ))
+rest_weighted_collecTRI_dbTF <- rest_signed_weighted_collecTRI_dbTF %>%
+  mutate(weight = abs(weight))
+
+write_csv(rest_signed_weighted_collecTRI_dbTF, "output/040722/final_dbTF/signed_weighted_res_collecTRI.csv")
+write_csv(rest_agnostic_collecTRI_dbTF, "output/040722/final_dbTF/agnostic_res_collecTRI.csv")
+write_csv(rest_signed_collecTRI_dbTF, "output/040722/final_dbTF/signed_res_collecTRI.csv")
+write_csv(rest_weighted_collecTRI_dbTF, "output/040722/final_dbTF/weighted_res_collecTRI.csv")
+```
+
+
+### allTF
+```{r}
+signed_collecTRI_dbTF <- read_csv(file_names_allTF[str_detect(file_names_allTF, "sign")]) %>%
+ mutate(source = map_chr(str_split(TF.TG, ":"), 1),
+        target = map_chr(str_split(TF.TG, ":"), 2))%>% 
+  mutate(confidence = "A") %>%
+  rename("weight" = "sign") %>%
+  dplyr::select(c(source, confidence, target, weight))
+
+agnostic_collecTRI_dbTF <- signed_collecTRI_dbTF %>%
+  mutate(weight = abs(weight))
+
+write_csv(signed_collecTRI_dbTF, "output/040722/final_allTF/signed_collecTRI.csv")
+write_csv(agnostic_collecTRI_dbTF, "output/040722/final_allTF/agnostic_collecTRI.csv")
+
+rest_signed_weighted_collecTRI_dbTF  <- read_csv(file_names_allTF[str_detect(file_names_allTF, "weight")]) %>%
+  mutate(confidence = "A") %>%
+  dplyr::select(c(source, confidence, target, weight))
+rest_agnostic_collecTRI_dbTF <- rest_signed_weighted_collecTRI_dbTF %>%
+  mutate(weight = 1)
+rest_signed_collecTRI_dbTF <- rest_signed_weighted_collecTRI_dbTF %>%
+  mutate(weight = case_when(
+    weight > 0 ~ 1,
+    weight < 0 ~-1
+  ))
+rest_weighted_collecTRI_dbTF <- rest_signed_weighted_collecTRI_dbTF %>%
+  mutate(weight = abs(weight))
+
+write_csv(rest_signed_weighted_collecTRI_dbTF, "output/040722/final_allTF/signed_weighted_res_collecTRI.csv")
+write_csv(rest_agnostic_collecTRI_dbTF, "output/040722/final_allTF/agnostic_res_collecTRI.csv")
+write_csv(rest_signed_collecTRI_dbTF, "output/040722/final_allTF/signed_res_collecTRI.csv")
+write_csv(rest_weighted_collecTRI_dbTF, "output/040722/final_allTF/weighted_res_collecTRI.csv")
+```
+
