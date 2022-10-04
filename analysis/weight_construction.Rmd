@@ -1,0 +1,324 @@
+---
+title: "Weight construction"
+author: "Sophia Müller-Dott"
+date: '2022-09-22'
+output: html_document
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+library(MatrixRider)
+library(TFBSTools)
+library(Biostrings)
+library(tidyverse)
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+library(BSgenome.Hsapiens.UCSC.hg38)
+library('org.Hs.eg.db')
+```
+
+
+## Introduction
+
+We want to add biolofical weights to our TF-gene connections. For that we will try to calculate binding affinities for each connection.
+We need TF motifs and Promoter Sequence to calculate the binding affinities using MatrixRider.
+
+These are all connections in CollecTRI
+```{r}
+GRN <- read.csv("output/signed_CollecTRI_dbTF_040722.csv") %>%
+  mutate(TF = map_chr(str_split(TF.TG, ":"), 1),
+         TG = map_chr(str_split(TF.TG, ":"), 2))
+```
+
+
+## Promoter sequence
+We select all target genes in our network and map their Gene Symbols to Entrez IDs. For seven Genes no entrez IDs are available
+```{r}
+symbols <- unique(GRN$TG)
+# Gene symbols are transformed to entrez IDs
+entrez_ids <- mapIds(org.Hs.eg.db, symbols, 'ENTREZID', 'ALIAS')
+ids <- entrez_ids[!is.na(entrez_ids)]
+
+names(entrez_ids)[is.na(entrez_ids)]
+```
+
+
+We then select 1000 nucleotides upstream of the transcription start site as the possible binding region of a TF.
+The binding affinity of a TF to this sequence will be calculated. 
+For 62 genes we have a problem accessing the promoter sequence
+
+```{r}
+transcriptCoordsByGene.GRangesList <- transcriptsBy(TxDb.Hsapiens.UCSC.hg38.knownGene, by = "gene")
+
+prom_sequence <- map(unique(ids), function(id){
+  getPromSeq <- function(id){
+    res <- getPromoterSeq (transcriptCoordsByGene.GRangesList[id],
+                           Hsapiens, upstream=1000, downstream=100)
+    return(res)
+  }
+
+  getPromSeq_poss <- possibly(.f = getPromSeq, otherwise = NA)
+  getPromSeq_poss(id)
+
+})
+names(prom_sequence) <- unique(ids)
+prom_sequence_raw <- prom_sequence
+prom_sequence <- prom_sequence[!is.na(prom_sequence)]
+
+mapIds(org.Hs.eg.db, names(prom_sequence_raw[is.na(prom_sequence_raw)]), 'ALIAS', 'ENTREZID') %>% unlist()
+
+knitr::kable(data.frame(promoterSequence = length(prom_sequence),
+                        noSequence = length(mapIds(org.Hs.eg.db, names(prom_sequence_raw[is.na(prom_sequence_raw)]), 'ALIAS', 'ENTREZID') %>% unlist())))
+```
+
+
+## TF motifs
+
+For TF motifs we used JASPAR, hocomoco, unibind. 
+encode is included in JASPAR
+open questions:
+- include mouse information to increase the coverage?
+- How to handle multiple motifs in JASPAR. They might come from different sources, e.g. ChIP-Seq, Compiled(?). But I don't know how I can access that information in the files (only saw it on the website). 
+
+### JASPAR
+```{r}
+JASPAR_down_core <- list.files("data/JASPAR2022_CORE_redundant_pfms_jaspar_20220923", full.names = T)
+JASPAR_down_unval <- list.files("data/JASPAR2022_UNVALIDATED_redundant_pfms_jaspar_20220923", full.names = T)
+
+TF_motifs <- map(c(JASPAR_down_core, JASPAR_down_unval), TFBSTools::readJASPARMatrix)
+
+TFs <- map_chr(TF_motifs, function(tf){
+  names(tf@listData)
+})
+
+humanTFs <- unique(GRN$TF)[unique(GRN$TF) %in% TFs]
+notf <- unique(GRN$TF)[!unique(GRN$TF) %in% TFs] 
+
+jaspar_tf_motifs <- map(TF_motifs, function(motif){
+  motif@listData[[1]]
+})
+
+names(jaspar_tf_motifs) <- TFs
+jaspar_tf_motifs <- jaspar_tf_motifs[!duplicated(names(jaspar_tf_motifs))]
+jaspar_tf_motifs <- jaspar_tf_motifs[names(jaspar_tf_motifs) %in% unique(GRN$TF)]
+
+knitr::kable(data.frame(motif = c("Human", "No"),
+                        numberOfTFs = c(length(humanTFs), length(notf))))
+```
+
+### HOCOMOCO
+
+HOCOMOCO stored information about 71 TFs which were not part of JASPAR. With Jaspar and HOCOMO we have the information of 646/839 TFs.
+```{r}
+hocomoco <- list.files("data/hocomoco_20220922", full.names = T)
+hocomoco_tfs <- hocomoco[map_lgl(hocomoco, function(tf_file){
+  tf <- str_split(str_split(tf_file, "_")[[1]][2], "/")[[1]][2]
+  any(str_detect(notf, tf)) && notf[str_detect(notf, tf)] == tf
+})]
+
+hocomoco_tf_motifs <- map(hocomoco_tfs, function(tf_file){
+  all.lines <- scan(tf_file, what=character(0), sep='\n', quiet=TRUE)
+  pcm_raw <- map(2:length(all.lines), function(i){
+     str_split(all.lines[i],  '\t') %>% unlist() %>% as.numeric()
+  }) %>% unlist()
+  
+  profileMatrix <- matrix(as.integer(pcm_raw) ,nrow=4, byrow=TRUE, dimnames=list(DNA_BASES))
+
+  pfmQuery <- PFMatrix(profileMatrix=profileMatrix, name = str_match(all.lines[1], ">\\s*(.*?)\\s*_")[2])
+})
+
+names(hocomoco_tf_motifs) <- map_chr(hocomoco_tfs, function(tf_file){
+  all.lines <- scan(tf_file, what=character(0), sep='\n', quiet=TRUE)
+  str_match(all.lines[1], ">\\s*(.*?)\\s*_")[2]
+})
+hocomoco_tf_motifs <- hocomoco_tf_motifs[!duplicated(names(hocomoco_tf_motifs))]
+
+knitr::kable(data.frame(motif = c("Human", "No"),
+                        numberOfTFs = c(sum(unique(GRN$TF) %in% unique(c(names(jaspar_tf_motifs), names(hocomoco_tf_motifs)))), 
+                                        sum(!unique(GRN$TF) %in% unique(c(names(jaspar_tf_motifs), names(hocomoco_tf_motifs)))))))
+```
+
+### Unibind
+In theory Unibind has 5 more TF but I don't understand the additional information
+```{r}
+still_missing_tfs <- unique(GRN$TF)[!unique(GRN$TF) %in% unique(c(names(jaspar_tf_motifs), names(hocomoco_tf_motifs)))]
+files_unibind <- list.files("data/damo_hg38_PWMs_20220923", full.names = T)
+unibind_tf_files <- files_unibind[map_lgl(files_unibind, function(tf_file){
+  tf <- str_split(tf_file, "\\.")[[1]][3]
+  any(str_detect(still_missing_tfs, tf)) && any(str_detect(tf, still_missing_tfs)) && still_missing_tfs[str_detect(still_missing_tfs, tf)] == tf
+})]
+
+unibind_tfs <- unique(map_chr(unibind_tf_files, function(x)str_split(x, "\\.")[[1]][3]))
+still_missing_tfs <- still_missing_tfs[!still_missing_tfs %in% unibind_tfs]
+
+
+#map(unibind_tf_files, function(folder){
+#  print(folder)
+#  
+#  file_pwm <- list.files(folder, full.names = T)[1]
+#  
+#  
+#  pwm <- scan(file_pwm, what=character(0), sep='\n', quiet=TRUE)
+#
+#})
+
+```
+
+### Mouse
+If we would include binding sites from mice where we don't have any human information we would have additional informatio for 29 TFs (to a total of 679 TFs)
+```{r}
+tf_m <- paste0(substring(still_missing_tfs, 1, 1),
+                 tolower(substring(still_missing_tfs, 2, nchar(still_missing_tfs))))
+
+sum(tf_m %in% TFs)
+```
+
+### Check TFs without motif
+```{r}
+TFs_nm <- unique(GRN$TF)[!unique(GRN$TF) %in% unique(c(names(jaspar_tf_motifs),
+                                                                  names(hocomoco_tf_motifs)))]
+
+TF_size_nm <- GRN %>% 
+  dplyr::filter(TF %in% TFs_nm) %>%
+  group_by(TF) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n))
+
+ggplot(table(TF_size_nm$n) %>% as.data.frame(), aes(x = Var1, y= Freq)) +
+  geom_bar(stat="identity") +
+  xlab("Number of targets") +
+  geom_vline(xintercept = 4.5, color = "red") +
+  annotate("text", x=3, y=35, label= sum(TF_size_nm$n < 5), color = "red") +
+  annotate("text", x=24, y=35, label= sum(TF_size_nm$n >= 5), color = "red")  + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+head(TF_size_nm)
+```
+
+
+## Calculate probabilities
+### Matrix Rider
+
+```{r}
+final_TFmotifs <- append(jaspar_tf_motifs, hocomoco_tf_motifs)
+
+GRN_prob <- map_dfr(1:nrow(GRN), function(j){
+  x <- GRN[j,]
+  if (any(names(ids) == x$TG)){
+    gene_id <- ids[names(ids) == x$TG]
+  } else {
+    gene_id <- c("no gene id")
+  }
+
+  if (x$TF %in% names(final_TFmotifs) & gene_id %in% names(prom_sequence)){
+    pfm <- final_TFmotifs[[x$TF]]
+    bind_aff <- map_dbl(1:length(prom_sequence[[gene_id]][[1]]), function(i){
+      sequ <- prom_sequence[[gene_id]][[1]][i]
+      log(getSeqOccupancy(sequ[[1]], pfm, 0))
+    })
+
+    data.frame(TF = x$TF,
+               TG = x$TG,
+               bind_aff.mean = mean(bind_aff),
+               bind_aff.sd = sd(bind_aff))
+  } else {
+    data.frame(TF = x$TF,
+               TG = x$TG,
+               bind_aff.mean = NA,
+               bind_aff.sd = NA)
+  }
+})
+
+GRN_prob$bind_aff.mean[is.infinite(GRN_prob$bind_aff.mean)] <- NA
+
+saveRDS(GRN_prob, "output/binding_affinities_matrixRider.rds")
+```
+
+### Scaling
+Edges where either the TF motif or the sequence and all edges with a binding score lower than zero were removed. The weights were then scaled to be between 0 and 1. 
+```{r}
+GRN_prob <- readRDS("output/binding_affinities_matrixRider.rds")
+
+TF_weights <- GRN_prob %>%
+  filter(!is.na(bind_aff.mean)) %>%
+  group_by(TF) %>%
+  summarize(mean_weight = mean(bind_aff.mean))
+
+# Distribution of weights
+dist_weight_p <- ggplot(GRN_prob,aes(x = bind_aff.mean)) +
+  geom_density() 
+dist_weight_tf_p <- ggplot(TF_weights,aes(x = mean_weight)) + geom_density()
+
+# Remove edges with binding probability of zero or lower
+GRN_prob_filter <- GRN_prob %>%
+  filter(!is.na(bind_aff.mean)) %>%
+  filter(!bind_aff.mean <= 0)
+
+GRN_scaled <- map_dfr(unique(GRN_prob_filter$TF), function(tf){
+  GRN_tf <- GRN_prob_filter %>% dplyr::filter(TF == tf)
+
+  GRN_tf_tmp <- GRN_tf %>% mutate(scaled_prob = (GRN_tf$bind_aff.mean) / (max(GRN_tf$bind_aff.mean, na.rm = T)))
+  GRN_tf_tmp %>% dplyr::select(TF, TG, scaled_prob)
+})
+
+dist_weight_sclaed_p <- ggplot(GRN_scaled,aes(x = scaled_prob)) +
+  geom_density()
+dist_weight_scaled_tf_p <- ggplot(GRN_scaled %>%
+  group_by(TF) %>%
+  summarize(mean_weight = mean(scaled_prob)),aes(x = mean_weight)) + geom_density()
+
+GRN_final <- GRN_scaled %>% 
+  mutate(TF.TG = paste(TF, TG, sep = ":")) %>%
+  dplyr::select(TF.TG, scaled_prob) %>%
+  left_join(GRN, by = "TF.TG") %>%
+  mutate(weight = scaled_prob * sign) %>%
+  dplyr::select(TF, TG, weight, PMID) %>%
+  rename("source" = "TF", "target" = "TG") %>%
+  arrange(source, target)
+
+test <- GRN_final %>% group_by(source) %>%
+  summarize(mean_weiht = mean(abs(weight)),
+            n = n(),
+            sum_weight = sum(abs(weight)))
+
+ggplot(test, aes(x=mean_weiht, y=n)) +
+  geom_point()
+
+ggplot(test, aes(x=mean_weiht, y=log(n))) +
+  geom_point()
+
+cor(test$mean_weiht, test$n, method = "spearman")
+head(GRN_final)
+```
+
+
+### Coverage
+```{r}
+GRN_missingInfo <- GRN_prob %>% filter(!is.na(bind_aff.mean))
+GRN_size <- data.frame(GRN_type = rep(c("GRN signed", "GRN missing information", "GRN weighted"), each = 4),
+           type = rep(c("Edges", "TF", "TG", "Mean Regulon size"), times = 3),
+           value = c(nrow(GRN), length(unique(GRN$TF)), length(unique(GRN$TG)), mean(table(GRN$TF)),
+                     nrow(GRN_missingInfo), length(unique(GRN_missingInfo$TF)), length(unique(GRN_missingInfo$TG)), mean(table(GRN_missingInfo$TF)),
+                     nrow(GRN_final), length(unique(GRN_final$source)), length(unique(GRN_final$target)), mean(table(GRN_final$source))
+                     )
+           )
+
+ggplot(GRN_size) + 
+  aes(x = type, y = value, fill = GRN_type) +
+  geom_bar(stat="identity", position=position_dodge())+
+  ggbreak::scale_y_cut(breaks=c(100, 1000, 10000), which=c(1,1,1 ), scales=c(0.5, 0.3, 0.1)) +
+  theme_minimal() + xlab("") + ylab("")
+  
+# Distribution of scaledweights
+dist_weight_scaled_p <- ggplot(GRN_final,aes(x = weight)) +
+  geom_density()
+
+TF_weights_scaled <- GRN_final %>%
+  group_by(source) %>%
+  summarise(mean_weight = mean(weight, na.rm = T)) %>%
+  arrange(desc(mean_weight))
+
+
+dist_weight_scaled_tf_p <- ggplot(TF_weights_scaled,aes(x = mean_weight)) + geom_density()
+dist_weight_scaled_p
+dist_weight_scaled_tf_p
+```
+
