@@ -1,7 +1,7 @@
 library(tidyverse)
 
-collecTRI_homogenized <- read_csv("output/PMID_CollecTRI_040722.csv")
-collecTRI_dbTF_homogenized <- read_csv("output/PMID_CollecTRI_dbTF_040722.csv")
+collecTRI_homogenized <- read_csv("output/040722/PMID_CollecTRI_040722.csv")
+collecTRI_dbTF_homogenized <- read_csv("output/040722/PMID_CollecTRI_dbTF_040722.csv")
 tf.keywords <- read_csv("data/tf_annotation_activators_repressors.csv")
 
 assign_sign <- function(homogenized.table,
@@ -35,7 +35,7 @@ assign_sign <- function(homogenized.table,
         activator_evidence == repressor_evidence ~ "unknown"
       ))
 
-    network.signed <- left_join(network.signed, tf.keywords.collapsed %>% select(TF, type), by = "TF")
+    network.signed <- left_join(network.signed, tf.keywords.collapsed %>% dplyr::select(TF, type), by = "TF")
 
     network.signed[network.signed$sign == 0,] <- network.signed[network.signed$sign == 0,] %>%
       mutate(sign = case_when(
@@ -75,7 +75,7 @@ assign_sign <- function(homogenized.table,
   network.signed <- network.signed %>%
     filter(sign != 0)
   network.signed <- network.signed %>%
-    select(c(TF.TG, sign, PMID))
+    dplyr::select(c(TF.TG, sign, PMID))
 
   print("Interactions PMID final:")
   print(table(network.signed$sign))
@@ -90,7 +90,7 @@ signed_network <- assign_sign(homogenized.table = collecTRI_homogenized,
 signed_dbTF_network <- assign_sign(homogenized.table = collecTRI_dbTF_homogenized,
                                    tf.keywords = tf.keywords)
 
-write_csv(signed_network, "output/signed_CollecTRI_040722.csv")
-write_csv(signed_dbTF_network, "output/signed_CollecTRI_dbTF_040722.csv")
+write_csv(signed_network, "output/040722/signed_CollecTRI_040722.csv")
+write_csv(signed_dbTF_network, "output/040722/signed_CollecTRI_dbTF_040722.csv")
 
 
