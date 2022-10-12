@@ -36,7 +36,7 @@ agnostic_collecTRI_dbTF <- signed_collecTRI_dbTF %>%
 write_csv(signed_collecTRI_dbTF, "output/040722/final_dbTF/signed_collecTRI.csv")
 write_csv(agnostic_collecTRI_dbTF, "output/040722/final_dbTF/agnostic_collecTRI.csv")
 
-rest_signed_weighted_collecTRI_dbTF  <- read_csv(file_names_dbTF[str_detect(file_names_dbTF, "weight")]) %>%
+rest_signed_weighted_collecTRI_dbTF  <- read_csv(file_names_dbTF[str_detect(file_names_dbTF, "weighted_gene")]) %>%
   mutate(confidence = "A") %>%
   dplyr::select(c(source, confidence, target, weight))
 rest_agnostic_collecTRI_dbTF <- rest_signed_weighted_collecTRI_dbTF %>%

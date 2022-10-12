@@ -51,4 +51,53 @@ range(TF_weights[TF_weights$source %in% TF_benchmark,]$mean_likelihood)
 mean(TF_weights[TF_weights$source %in% TF_benchmark,]$mean_likelihood)
 ```
 
+## Testing effect of weights
+```{r}
+knockTF_expr <- read_csv("data/knockTF_expr.csv") %>%
+  column_to_rownames("...1")
+knockTF_meta <- read_csv("data/knockTF_meta.csv")
+
+
+msk = knockTF_meta$'logFC' < -1
+mat = knockTF_expr[msk,]
+obs = knockTF_meta[msk,]
+obs$TF %>% unique() %>% length()
+```
+
+```{r}
+signed <- read_csv("output/040722/decoupler/mean_signed_res.csv")
+signed_weighted <- read_csv("output/040722/decoupler/mean_signed_weighted_res.csv")
+agnostic <- read_csv("output/040722/decoupler/mean_agnostic_res.csv")
+weighted <- read_csv("output/040722/decoupler/mean_weighted_res.csv")
+```
+```{r}
+filtered_datasets <- obs$...1
+
+TF_act <- map_dfc(list(signed, signed_weighted, agnostic, weighted), function(res){
+  filtered <- res %>%
+    filter(...1 %in% filtered_datasets)
+  map_dbl(filtered$...1, function(exp){
+    TF <- obs$TF[obs$...1 == exp]
+    if(TF %in% colnames(filtered)){
+      filtered[filtered$...1 == exp, TF] %>% as.numeric()
+    } else {NA}
+    
+  })
+})
+
+df_p <- data.frame(act = c(TF_act$...1, TF_act$...2, TF_act$...3, TF_act$...4),
+           network = rep(c("signed", "signed_weighted", "agnostic", "weighted"), each = nrow(TF_act)))
+df_p$network <- factor(df_p$network, levels = c("signed", "signed_weighted", "agnostic", "weighted")) 
+
+p <- ggplot(df_p, aes(x=network, y=act)) + 
+  geom_boxplot() +
+  theme_minimal() + theme(text = element_text(size = 20))  
+
+pdf("figures/activity_weighted.pdf", width = 8, height = 7)
+p
+dev.off()
+
+t.test(TF_act$...1, TF_act$...2, alternative = "two.sided")
+t.test(TF_act$...3, TF_act$...4, alternative = "two.sided")
+```
 

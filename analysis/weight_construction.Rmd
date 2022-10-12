@@ -50,7 +50,8 @@ transcriptCoordsByGene.GRangesList <- transcriptsBy(TxDb.Hsapiens.UCSC.hg38.know
 
 prom_sequence <- map(unique(ids), function(id){
   getPromSeq <- function(id){
-    res <- getPromoterSeq (transcriptCoordsByGene.GRangesList[id],
+    tscripts_gr <- stack(transcriptCoordsByGene.GRangesList[id], "gene_id")
+    res <- getPromoterSeq (tscripts_gr[which.min(tscripts_gr@ranges@start)],
                            Hsapiens, upstream=1000, downstream=100)
     return(res)
   }
@@ -199,8 +200,19 @@ head(TF_size_nm)
 
 ```{r}
 final_TFmotifs <- append(jaspar_tf_motifs, hocomoco_tf_motifs)
+motif_size <- data.frame(TF = names(final_TFmotifs),
+                         size = map_dbl(final_TFmotifs, function(x){x@profileMatrix %>% ncol()}))
 
+ggplot(table(motif_size$size) %>% as.data.frame(), aes(x = Var1, y= Freq)) +
+  geom_bar(stat="identity") +
+  xlab("Motif length") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+
+```{r}
 GRN_prob <- map_dfr(1:nrow(GRN), function(j){
+  print(j)
   x <- GRN[j,]
   if (any(names(ids) == x$TG)){
     gene_id <- ids[names(ids) == x$TG]
@@ -210,49 +222,110 @@ GRN_prob <- map_dfr(1:nrow(GRN), function(j){
 
   if (x$TF %in% names(final_TFmotifs) & gene_id %in% names(prom_sequence)){
     pfm <- final_TFmotifs[[x$TF]]
-    bind_aff <- map_dbl(1:length(prom_sequence[[gene_id]][[1]]), function(i){
-      sequ <- prom_sequence[[gene_id]][[1]][i]
-      log(getSeqOccupancy(sequ[[1]], pfm, 0))
-    })
+    motif_length <- pfm@profileMatrix %>% ncol()
+    sequ <- prom_sequence[[gene_id]][[1]]
+    bind_aff <- log(getSeqOccupancy(sequ, pfm, 0), base = 10)
 
     data.frame(TF = x$TF,
                TG = x$TG,
-               bind_aff.mean = mean(bind_aff),
-               bind_aff.sd = sd(bind_aff))
+               bind_aff = bind_aff,
+               motif_length = motif_length)
   } else {
     data.frame(TF = x$TF,
                TG = x$TG,
-               bind_aff.mean = NA,
-               bind_aff.sd = NA)
+               bind_aff = NA,
+               motif_length = NA)
   }
 })
 
-GRN_prob$bind_aff.mean[is.infinite(GRN_prob$bind_aff.mean)] <- NA
+GRN_prob$bind_aff[is.infinite(GRN_prob$bind_aff)] <- NA
 
-saveRDS(GRN_prob, "output/040722/binding_affinities_matrixRider_dbTF.rds")
+saveRDS(GRN_prob, "output/040722/binding_affinities_matrixRider_dbTF_new.rds")
 ```
+
+```{r}
+GRN_prob_filtered <- GRN_prob %>%
+  filter(!is.na(bind_aff))
+ggplot(GRN_prob_filtered, aes(x = bind_aff, y = motif_length)) +
+  geom_point()
+cor(GRN_prob_filtered$bind_aff, GRN_prob_filtered$motif_length)
+
+GRN_prob_filtered <- GRN_prob_filtered %>%
+  mutate(bind_aff_length = bind_aff/(1100-motif_length+1))
+
+ggplot(GRN_prob_filtered, aes(x = bind_aff_length, y = motif_length)) +
+  geom_point()
+cor(GRN_prob_filtered$bind_aff_length, GRN_prob_filtered$motif_length)
+
+motif_score <- GRN_prob_filtered %>% group_by(motif_length) %>% summarize(mean_bind = mean(bind_aff))
+
+p <- ggplot(motif_score, aes(x = mean_bind, y = motif_length)) +
+  geom_point() +
+  theme_minimal() + theme(text = element_text(size = 20)) +
+  xlab("mean binding affinity")
+
+pdf("figures/weight_distribution_TF.pdf", width = 7, height = 6)
+p
+dev.off()
+cor(motif_score$mean_bind, motif_score$motif_length)
+```
+
 
 ### Scaling
 Edges where either the TF motif or the sequence and all edges with a binding score lower than zero were removed. The weights were then scaled to be between 0 and 1. 
 ```{r}
-GRN_prob <- readRDS("output/040722/binding_affinities_matrixRider_dbTF.rds")
+GRN_prob <- readRDS("output/040722/binding_affinities_matrixRider_dbTF_new.rds")
 
 TF_weights <- GRN_prob %>%
   filter(!is.na(bind_aff.mean)) %>%
   group_by(TF) %>%
-  summarize(mean_weight = mean(bind_aff.mean))
+  summarize(std_weight = sd(bind_aff.mean))
+
+TF_weights <- GRN_prob %>%
+  filter(!is.na(bind_aff)) %>%
+  group_by(TF) %>%
+  summarize(mean_weight = mean(bind_aff))
 
 # Distribution of weights
 dist_weight_p <- ggplot(GRN_prob,aes(x = bind_aff.mean)) +
-  geom_density() 
-dist_weight_tf_p <- ggplot(TF_weights,aes(x = mean_weight)) + geom_density()
+  geom_density() +
+  theme_minimal() + theme(text = element_text(size = 20)) +
+  xlab("binding affinity")
+
+pdf("figures/weight_distribution.pdf", width = 9, height = 6)
+dist_weight_p
+dev.off()
+
+dist_weight_tf_p <- ggplot(TF_weights,aes(x = std_weight)) + geom_density()
 
 # Remove edges with binding probability of zero or lower
 GRN_prob_filter <- GRN_prob %>%
-  filter(!is.na(bind_aff.mean)) %>%
-  filter(!bind_aff.mean <= 0)
+  filter(!is.na(bind_aff)) %>%
+  mutate(bind_aff = bind_aff + abs(min(bind_aff)))
+
+ggplot(GRN_prob_filter,aes(x = bind_aff)) +
+  geom_density() +
+  theme_minimal() + theme(text = element_text(size = 20))
 ```
 
+## scale per gene
+```{r}
+GRN_scaled <- map_dfr(unique(GRN_prob_filter$TG), function(tg){
+  GRN_tf <- GRN_prob_filter %>% dplyr::filter(TG == tg)
+
+  GRN_tf_tmp <- GRN_tf %>% mutate(scaled_prob = (GRN_tf$bind_aff) / (max(GRN_tf$bind_aff, na.rm = T)))
+  GRN_tf_tmp %>% dplyr::select(TF, TG, scaled_prob)
+})
+
+GRN_scaled <- GRN_scaled %>%
+  left_join(GRN_prob_filter, by = c("TF", "TG"))
+
+#cut_off <- quantile(GRN_scaled$bind_aff, probs = 0.2)
+#filter <- GRN_scaled$TG[GRN_scaled$scaled_prob == 1 & GRN_scaled$bind_aff <= cut_off]
+
+#GRN_scaled <- GRN_scaled %>%
+#  filter(!TG %in% filter)
+```
 
 
 ```{r}
@@ -262,13 +335,31 @@ GRN_scaled <- map_dfr(unique(GRN_prob_filter$TF), function(tf){
   GRN_tf_tmp <- GRN_tf %>% mutate(scaled_prob = (GRN_tf$bind_aff.mean) / (max(GRN_tf$bind_aff.mean, na.rm = T)))
   GRN_tf_tmp %>% dplyr::select(TF, TG, scaled_prob)
 })
+```
+
+
+```{r}
+motif_length_df <- GRN_scaled %>% 
+  group_by(motif_length) %>%
+  summarize(mean_bind = mean(scaled_prob))
+
+cor(motif_length_df$motif_length, motif_length_df$mean_bind)
+
+ggplot(motif_length_df, aes(x = motif_length, y= mean_bind)) +
+  geom_point()
 
 dist_weight_sclaed_p <- ggplot(GRN_scaled,aes(x = scaled_prob)) +
   geom_density()
-dist_weight_scaled_tf_p <- ggplot(GRN_scaled %>%
-  group_by(TF) %>%
-  summarize(mean_weight = mean(scaled_prob)),aes(x = mean_weight)) + geom_density()
 
+TFs <- table(GRN_scaled$TF) %>% as.data.frame() %>% filter(Freq >= 5) %>% pull(Var1)
+dist_weight_scaled_tf_p <- ggplot(GRN_scaled %>%
+                                    filter(TF %in% TFs) %>%
+                                    group_by(TF) %>%
+                                    summarize(mean_weight = mean(scaled_prob)),aes(x = mean_weight)) + geom_density()
+```
+
+
+```{r}
 GRN_final <- GRN_scaled %>% 
   mutate(TF.TG = paste(TF, TG, sep = ":")) %>%
   dplyr::select(TF.TG, scaled_prob) %>%
@@ -283,16 +374,20 @@ test <- GRN_final %>% group_by(source) %>%
             n = n(),
             sum_weight = sum(abs(weight)))
 
-ggplot(test, aes(x=mean_weiht, y=n)) +
+test_2 <- test %>% 
+  group_by(n) %>%
+  summarize(mean_weiht =  mean(abs(mean_weiht)))
+
+ggplot(test_2, aes(x=mean_weiht, y=n)) +
   geom_point()
 
-ggplot(test, aes(x=mean_weiht, y=log(n))) +
+ggplot(test_2, aes(x=mean_weiht, y=log(n))) +
   geom_point()
 
 cor(test$mean_weiht, test$n, method = "spearman")
 head(GRN_final)
 
-write_csv(GRN_final, "output/040722/GRN_weighted_040722.csv")
+write_csv(GRN_final, "output/040722/GRN_weighted_gene_dbTF_040722.csv")
 ```
 
 
