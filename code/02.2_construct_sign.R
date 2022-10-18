@@ -19,6 +19,10 @@ assign_sign <- function(homogenized.table,
     ))
 
   network.signed$TF <- unlist(lapply(str_split(network.signed$TF.TG, ":"), `[[`, 1))
+  network.signed <- network.signed %>%
+    mutate(decision = case_when(
+    sign != 0 ~ "PMID"
+  ))
 
   print("Interactions PMID:")
   print(table(network.signed$sign))
@@ -44,6 +48,12 @@ assign_sign <- function(homogenized.table,
         type == "unknown" ~ 0
       ))
 
+    network.signed <- network.signed %>%
+      mutate(decision = case_when(
+        decision == "PMID" ~ "PMID",
+        sign != 0 & is.na(decision) ~ "keywords"
+      ))
+
     print("Interactions PMID + keywords:")
     print(table(network.signed$sign))
   }
@@ -64,18 +74,26 @@ assign_sign <- function(homogenized.table,
     network.signed$sign[network.signed$perc_repressor > 0.5 & network.signed$sign == 0] <- -1
     network.signed$sign[network.signed$perc_activator > 0.5 & network.signed$sign == 0] <- 1
 
+    network.signed <- network.signed %>%
+      mutate(decision = case_when(
+        decision == "PMID" ~ "PMID",
+        decision == "keywords" ~ "keywords",
+        sign != 0 & is.na(decision) ~ "regulon"
+      ))
+
     print("Interactions PMID + keywords + TF regulon:")
     print(table(network.signed$sign))
   }
 
   if (unknown.to.pos){
     network.signed$sign[network.signed$sign == 0] <- 1
+    network.signed$decision[is.na(network.signed$decision)] <- "unknown"
   }
 
   network.signed <- network.signed %>%
     filter(sign != 0)
   network.signed <- network.signed %>%
-    dplyr::select(c(TF.TG, sign, PMID))
+    dplyr::select(c(TF.TG, sign, PMID, decision))
 
   print("Interactions PMID final:")
   print(table(network.signed$sign))
