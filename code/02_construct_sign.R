@@ -1,8 +1,16 @@
+# Copyright (c) Sophia Müller-Dott [2022]
+# sophia.mueller-dott@uni-heidelberg.de
+
 library(tidyverse)
 
-collecTRI_homogenized <- read_csv("output/040722/PMID_CollecTRI_040722.csv")
-collecTRI_dbTF_homogenized <- read_csv("output/040722/PMID_CollecTRI_dbTF_040722.csv")
+## load data ---------------------------
+# define version and load homogenized table
+file.version <- "040722"
+collecTRI_homogenized <- read_csv(file.path("output", file.version, "01_homogenized_table", "PMID_CollecTRI.csv"))
+
+# load TF prior knowledge
 tf.keywords <- read_csv("data/tf_annotation_activators_repressors.csv")
+
 all.keywords <- readxl::read_excel("data/CollecTRI_TF-role_new_draft_211122.xlsx") %>%
   rename("TF" = "TFC2_Associated.Gene.Name",
          "strict" = "STRICT_agreement (GO/UniProt-StructureFunction)",
@@ -10,6 +18,8 @@ all.keywords <- readxl::read_excel("data/CollecTRI_TF-role_new_draft_211122.xlsx
          "relaxed_SF" =  "RELAXED - StructureFunction (STRICT_add KRAB/Soto)",
          "relaxed" = "RELAXED_KB OR StructureFunction")
 
+
+## Create homogenized table ---------------------------
 assign_sign <- function(homogenized.table,
                         tf.keywords = NULL, #needs to be provided if use.keywords is set to TRUE
                         use.keywords = T,
@@ -168,7 +178,7 @@ assign_sign <- function(homogenized.table,
   network.signed <- network.signed %>%
     filter(sign != 0)
   network.signed <- network.signed %>%
-    dplyr::select(c(TF.TG, sign, PMID, decision))
+    dplyr::select(c(TF.TG, sign, PMID, TF.category, decision))
 
   print("Interactions PMID final:")
   print(table(network.signed$sign))
@@ -177,59 +187,28 @@ assign_sign <- function(homogenized.table,
 }
 
 
+## Construct and save networks ---------------------------
+dir.create(file.path("output", file.version), showWarnings = FALSE)
+dir.create(file.path("output", file.version, "02_signed_networks"), showWarnings = FALSE)
+
 map(c("key_GO", "strict", "relaxed_KB", "relaxed_SF", "relaxed"), function(keyword){
   print(keyword)
   if (keyword == "key_GO") {
     signed_network <- assign_sign(homogenized.table = collecTRI_homogenized,
                                   tf.keywords = tf.keywords,
                                   keywords = keyword)
-    signed_network <- signed_network %>%
-      mutate(source = map_chr(str_split(TF.TG, ":"), 1),
-             target = map_chr(str_split(TF.TG, ":"), 2))%>%
-      mutate(confidence = "A") %>%
-      rename("weight" = "sign") %>%
-      dplyr::select(c(source, confidence, target, weight, decision))
-
-    signed_dbTF_network <- assign_sign(homogenized.table = collecTRI_dbTF_homogenized,
-                                       tf.keywords = tf.keywords,
-                                       keywords = keyword)
-
-    signed_dbTF_network <- signed_dbTF_network %>%
-      mutate(source = map_chr(str_split(TF.TG, ":"), 1),
-             target = map_chr(str_split(TF.TG, ":"), 2))%>%
-      mutate(confidence = "A") %>%
-      rename("weight" = "sign") %>%
-      dplyr::select(c(source, confidence, target, weight, decision))
-
-    write_csv(signed_network, paste0("output/040722/signed_networks/",keyword, "_signed_CollecTRI_040722.csv"))
-    write_csv(signed_dbTF_network, paste0("output/040722/signed_networks/", keyword, "_signed_CollecTRI_dbTF_040722.csv"))
-  } else {
+  }  else {
     signed_network <- assign_sign(homogenized.table = collecTRI_homogenized,
                                   tf.keywords = all.keywords,
                                   keywords = keyword)
-
+    }
     signed_network <- signed_network %>%
       mutate(source = map_chr(str_split(TF.TG, ":"), 1),
              target = map_chr(str_split(TF.TG, ":"), 2))%>%
-      mutate(confidence = "A") %>%
       rename("weight" = "sign") %>%
-      dplyr::select(c(source, confidence, target, weight, decision))
+      dplyr::select(c(source, target, weight, PMID, TF.category, decision))
 
-    signed_dbTF_network <- assign_sign(homogenized.table = collecTRI_dbTF_homogenized,
-                                       tf.keywords = all.keywords,
-                                       keywords = keyword)
-
-    signed_dbTF_network <- signed_dbTF_network %>%
-      mutate(source = map_chr(str_split(TF.TG, ":"), 1),
-             target = map_chr(str_split(TF.TG, ":"), 2))%>%
-      mutate(confidence = "A") %>%
-      rename("weight" = "sign") %>%
-      dplyr::select(c(source, confidence, target, weight, decision))
-
-    write_csv(signed_network, paste0("output/040722/signed_networks/",keyword, "_signed_CollecTRI_040722.csv"))
-    write_csv(signed_dbTF_network, paste0("output/040722/signed_networks/", keyword, "_signed_CollecTRI_dbTF_040722.csv"))
-  }
-
+    write_csv(signed_network, file.path("output", file.version, "02_signed_networks", paste0(keyword, "_signed_CollecTRI.csv")))
 })
 
 

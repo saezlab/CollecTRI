@@ -3,9 +3,14 @@
 
 library(tidyverse)
 
-## ---------------------------
-NTNU_compiled_raw <- read.table("data/CollecTRI_alias_pairs_final_from_Miguel_040722.tsv", sep = "\t", header = TRUE)
-NTNU_compiled_dbTF <- NTNU_compiled_raw %>% filter(TF.Category == "DbTF")
+## define version and path for collected TRI pairs ---------------------------
+file.version <- "040722"
+raw.file <- "data/CollecTRI_alias_pairs_final_from_Miguel_040722.tsv"
+#Code is quite specific to the structure of this file.
+#If the column names and overall structure change in a never version the code will need to be checked again.
+
+## Create homogenized table ---------------------------
+NTNU_compiled_raw <- read.table(raw.file, sep = "\t", header = TRUE)
 
 get_homogenized_table <- function(collecTRI.raw){
   # Rename columns to have a consistent naming
@@ -97,7 +102,8 @@ get_homogenized_table <- function(collecTRI.raw){
                PMID = paste(rownames(final_TF.TG), collapse = ","))
     })
   homogenized_table <- homogenized_table %>% add_column(TF.TG = rownames(collecTRI.raw),
-                                                        .before = "activation")
+                                                        .before = "activation") %>%
+    add_column(TF.category = collecTRI.raw$TF.Category)
 
   # final clean up to be sure to only have connections with associated PMIDs
   homogenized_table <- homogenized_table %>% filter(PMID != "")
@@ -106,7 +112,8 @@ get_homogenized_table <- function(collecTRI.raw){
 }
 
 homogenized_table <- get_homogenized_table(NTNU_compiled_raw)
-homogenized_table_dbTF <- get_homogenized_table(NTNU_compiled_dbTF)
 
-write_csv(homogenized_table, "output/PMID_CollecTRI_040722.csv")
-write_csv(homogenized_table_dbTF, "output/PMID_CollecTRI_dbTF_040722.csv")
+## Save homogenized table ---------------------------
+dir.create(file.path("output", file.version), showWarnings = FALSE)
+dir.create(file.path("output", file.version, "01_homogenized_table"), showWarnings = FALSE)
+write_csv(homogenized_table, file.path("output", file.version, "01_homogenized_table", "PMID_CollecTRI.csv"))
