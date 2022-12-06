@@ -113,6 +113,24 @@ get_homogenized_table <- function(collecTRI.raw){
 
 homogenized_table <- get_homogenized_table(NTNU_compiled_raw)
 
+
+## Remove TFs with uncertain role ---------------------------
+all.keywords <- readxl::read_excel("data/CollecTRI_TF-role_new_draft_211122.xlsx") %>%
+  rename("TF" = "TFC2_Associated.Gene.Name",
+         "strict" = "STRICT_agreement (GO/UniProt-StructureFunction)",
+         "relaxed_KB" = "RELAXED - KB (STRICT_add aggregated GO/UniProt)",
+         "relaxed_SF" =  "RELAXED - StructureFunction (STRICT_add KRAB/Soto)",
+         "relaxed" = "RELAXED_KB OR StructureFunction")
+
+rm.TFs <- all.keywords %>%
+  filter(TF_category %in% c("uncertain TF role", "likely coTF")) %>%
+  pull(TF)
+
+homogenized_table <- homogenized_table %>%
+  mutate(TF = map_chr(str_split(TF.TG, ":"), 1)) %>%
+  filter(!TF %in% rm.TFs) %>%
+  select(-TF)
+
 ## Save homogenized table ---------------------------
 dir.create(file.path("output", file.version), showWarnings = FALSE)
 dir.create(file.path("output", file.version, "01_homogenized_table"), showWarnings = FALSE)
