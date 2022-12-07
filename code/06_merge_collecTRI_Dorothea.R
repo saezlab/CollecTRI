@@ -72,5 +72,5 @@ ggplot(plot.df %>% filter(label == "edge")) +
   theme_minimal() + xlab("") + ylab("") +
   theme(text = element_text(size = 12)) + theme(legend.title = element_blank())
 
-dir.create(file.path("output", file.version, "05_merged_network"), showWarnings = FALSE)
-write_csv(merged %>% select(source, target, weight, TF.category, PMID), file.path("output", file.version, "05_merged_network", "doro_collecTRI.csv"))
+dir.create(file.path("output", file.version, "06_merged_network"), showWarnings = FALSE)
+write_csv(merged %>% select(source, target, weight, TF.category, PMID), file.path("output", file.version, "06_merged_network", "doro_collecTRI.csv"))
