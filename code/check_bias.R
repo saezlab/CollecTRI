@@ -1,198 +1,182 @@
+# Copyright (c) Sophia Müller-Dott [2022]
+# sophia.mueller-dott@uni-heidelberg.de
+
+#' In this script we will check if TFs with more
+#' targets by default get a higher score in the
+#' prediction and thus automatically perform better overall
+
 library(tidyverse)
+library(ggsignif)
+library(ggpubr)
+library(rstatix)
 
-# Load final networks
-input_path_dorothea <- c(file.path('data', "dorothea", "dorothea_A_new.rds"),
-                         file.path('data', "dorothea", "dorothea_ABC_new.rds"))
-input_path_v1 <- file.path('data', 'networks_v1', 'network_collection_v1.rds')
-input_path_v2 <- file.path('data', 'networks_v2', 'network_collection_v2.rds')
-input_path_v2_dbTF <- file.path('data', 'networks_dbTF_v2', 'network_collection_v2_dbTF.rds')
+## Load networks and TF activities ---------------------------
+file.version <- "040722"
 
-network_collection_v1 <- readRDS(input_path_v1)$ExTRI_comp_unrestricted
-network_collection_v2 <- readRDS(input_path_v2)$ExTRI_comp_unrestricted
-network_collection_v2_dbTF <- readRDS(input_path_v2_dbTF)$ExTRI_comp_unrestricted
+# networks
+collecTRI <- read_csv(file.path("output", file.version, "02_signed_networks", "strict_signed_collecTRI.csv"))
+dorothea <- read_csv("data/raw/dorothea_ABC.csv")[2:5]
+regnet <- read_csv("data/raw/regnetwork.csv")
 
-networks <- rbind(network_collection_v1, network_collection_v2, network_collection_v2_dbTF)
-path_networks <- c(input_path_dorothea, networks$path)
+obs <- read_csv('data/knockTF_meta.csv')
+msk <- obs$logFC < -1
+obs_filtered <- obs[msk,]
 
-final_networks <- map(path_networks, readRDS)
-names(final_networks) <- c("Dorothea A", "Dorothea ABC",
-                           "NTNU.1", "NTNU.1 s", "NTNU.1 w", "NTNU.1 s+w",
-                           "NTNU.2", "NTNU.2 s", "NTNU.2 w", "NTNU.2 s+w",
-                           "NTNU.2 dbTF", "NTNU.2 dbTF s", "NTNU.2 dbTF w", "NTNU.2 dbTF s+w")
-
-# Load TF activities
-decoupler_path <- list.files("output/new", pattern = "decoupler", full.names = T)
-decoupler_path_100 <- decoupler_path[!(str_detect(decoupler_path, "2000") | str_detect(decoupler_path, "1000"))]
-decoupler_path_1000 <- decoupler_path[str_detect(decoupler_path, "1000")]
-decoupler_path_2000 <- decoupler_path[str_detect(decoupler_path, "2000")]
-
-decoupler_res_100 <- map(decoupler_path_100, readRDS)
-names(decoupler_res_100) <- names(final_networks)
-
-decoupler_res_1000 <- map(decoupler_path_1000, readRDS)
-names(decoupler_res_1000) <- names(final_networks)
-
-decoupler_res_2000 <- map(decoupler_path_2000, readRDS)
-names(decoupler_res_2000) <- names(final_networks)[c(1,2,11,12,13,14)]
+TFs_bench <- obs_filtered$TF %>% unique()
 
 
-# Test bias of methods ------------------------------------------------
-all_bias_plots <- function(decoupler_res, n_permutations, method_filter){
-  bias_ntargets_p <- map(names(decoupler_res), function(network){
-    net <- final_networks[[network]]
-    decoupler_res_df <- decoupler_res[[network]]
-    nTargets <- table(net$source) %>%
-      as.data.frame() %>%
-      rename("source" = Var1)
+# TF activities
+decoupler_path <- list.files(file.path("output", file.version, "decoupler"), full.names = T)
+act <-  map(decoupler_path, read_csv)
+names(act) <-  list.files(file.path("output", file.version, "decoupler"))
 
-    decoup <- left_join(decoupler_res_df, nTargets, by = "source")
-    decoup <- decoup %>% filter(!(is.na(Freq)))
+## Check difference of TFs in benchmark ---------------------------
+TFs_collecTRI <- table(collecTRI$source) %>% as.data.frame() %>%
+  add_column(network = "collecTRI")
+TFs_doro <- table(dorothea$source) %>% as.data.frame() %>%
+  add_column(network = "dorothea")
+TFs_regnet <- table(regnet$source) %>% as.data.frame() %>%
+  add_column(network = "regnet")
 
-    decoup_per_exp <- decoup %>% filter(statistic == method_filter) %>% group_by(condition) %>% group_split()
+TF_df <- rbind(TFs_collecTRI, TFs_doro, TFs_regnet) %>%
+  mutate(benchmark = case_when(
+    Var1 %in% TFs_bench ~ "TF in benchmark",
+    !Var1 %in% TFs_bench ~ "TF not in benchmark"
+  )) %>%
+  rename("source" = "Var1") %>%
+  rename("nTargets" = "Freq") %>%
+  filter(nTargets >= 5)
 
-    correlations_df <- map_dfr(decoup_per_exp, function(exp){
-      all_correlation <- c()
-      for (i in c(nrow(exp), 100, 75, 50, 25)){
-        exp_filtered <- exp %>% arrange(desc(abs(score))) %>% slice(1:i)
-        corr_pearson <- cor(abs(exp_filtered$score), exp_filtered$Freq, method = "pearson")
-        corr_spearman <- cor(abs(exp_filtered$score), exp_filtered$Freq, method = "spearman")
+TF_df$network <- as.factor(TF_df$network)
 
-        all_correlation <- append(all_correlation, c(corr_pearson, corr_spearman))
-      }
-      names(all_correlation) <- c("corr_pearson_all", "corr_spearman_all",
-                                  "corr_pearson_100", "corr_spearman_100",
-                                  "corr_pearson_75", "corr_spearman_75",
-                                  "corr_pearson_50", "corr_spearman_50",
-                                  "corr_pearson_25", "corr_spearman_25")
-      all_correlation
-    })
+stat.test <- TF_df %>%
+  group_by(network) %>%
+  t_test(nTargets ~ benchmark) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
 
-    correlations_df <- correlations_df %>%
-      add_column(experiment = unique(decoup$condition)) %>%
-      column_to_rownames("experiment")
+bxp <- ggplot(TF_df, aes(x=network, y=nTargets, color=benchmark)) +
+  geom_boxplot()
 
+bxp <- ggboxplot(
+  TF_df, x = "network", y = "nTargets", fill = "benchmark"
+) +
+  theme_minimal()
 
-    correltion_plots <- map(colnames(correlations_df), function(corr_type){
-      ggplot(correlations_df, aes_string(x=corr_type)) +
-        geom_histogram(color="black", fill="grey", binwidth = 0.02) +
-        xlim(-1,1) +
-        ggtitle(paste0(network, " ", corr_type, " = ", round(mean(correlations_df[,corr_type]), digits = 2))) +
-        theme_bw()
-    })
-
-    cowplot::plot_grid(plotlist = correltion_plots, ncol = 2)
-
-  })
-
-  pdf(paste0("figures/final_comp/new/bias/bias_regulonsize_", method_filter, "_corr_", n_permutations, ".pdf"), width = 10, height = 20)
-  print(bias_ntargets_p)
-  dev.off()
+stat.test <- stat.test %>%
+  add_xy_position(x = "network", dodge = 0.8)
+bxp + stat_pvalue_manual(
+  stat.test,  label = "p.adj.signif", tip.length = 0.01,
+  bracket.nudge.y = -2
+)
 
 
-  # Check individual experiments
-  bias_scatterPerExp_p <- map(names(decoupler_res), function(network){
-    net <- final_networks[[network]]
-    decoupler_res_df <- decoupler_res[[network]]
-    nTargets <- table(net$source) %>%
-      as.data.frame() %>%
-      rename("source" = Var1)
 
-    decoup <- left_join(decoupler_res_df, nTargets, by = "source")
-    decoup <- decoup %>% filter(!(is.na(Freq)))
 
-    decoup_per_exp <- decoup %>% filter(statistic == method_filter) %>% group_by(condition) %>% group_split()
 
-    i <- sample(1:length(decoup_per_exp), 6)
+TF_df %>%
+  group_by(network, benchmark) %>%
+  summarise(mean_targets = mean(nTargets)) %>%
+  pivot_wider(names_from = benchmark, values_from = mean_targets) %>%
+  mutate(ratio =`TF in benchmark`/`TF not in benchmark`)
 
-    scatter_plots <- map(i, function(x){
-      ggplot(decoup_per_exp[[x]], aes(x=Freq, y = abs(score))) +
-        geom_point() +
-        theme_bw() +
-        ggtitle(paste0(network, " ", x, " , corr =",
-                       round(cor(decoup_per_exp[[x]]$Freq, abs(decoup_per_exp[[x]]$score)), digits = 2)
-        )
-        )
-    })
 
-    cowplot::plot_grid(plotlist = scatter_plots, ncol = 3)
+tmp <- ggplot(TF_df, aes(x=network, y=nTargets, fill=benchmark)) +
+ geom_boxplot() +
+  ylab("Number of targets")
 
-  })
+stats.test <- TF_df %>%
+  group_by(network) %>%
+  t_test(nTargets ~ benchmark) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
 
-  pdf(paste0("figures/final_comp/new/bias/bias_scatterPerExp_", method_filter, "_", n_permutations, ".pdf"), width = 15, height = 10)
-  print(bias_scatterPerExp_p)
-  dev.off()
 
-  # Check mean activity per TF
-  bias_meanAct_p <- map(names(decoupler_res), function(network){
-    net <- final_networks[[network]]
-    decoupler_res_df <- decoupler_res[[network]]
-    nTargets <- table(net$source) %>%
-      as.data.frame() %>%
-      rename("source" = Var1)
+stat.test <- stats.test %>%
+  add_xy_position(x = "network", dodge = 0.8)
+tmp +
+  stat_pvalue_manual(
+    stat.test, label = "p.adj", tip.length = 0.01,
+    bracket.nudge.y = -2
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
 
-    decoup <- left_join(decoupler_res_df, nTargets, by = "source")
-    decoup <- decoup %>% filter(!(is.na(Freq)))
 
-    decoup_per_tf <- decoup %>% filter(statistic == method_filter) %>% group_by(source) %>% summarise(mean_act = mean(abs(score)),
-                                                                                                      targets = unique(Freq))
+ggplot(TF_df %>% filter(benchmark == "TF not in benchmark"), aes(x=network, y=nTargets, fill=benchmark)) +
+  geom_boxplot() +
+  geom_signif(comparisons = list(c( "collecTRI", "regnet")),
+              map_signif_level=TRUE)
 
-    ggplot(decoup_per_tf, aes(x=targets, y = mean_act)) +
-      geom_point() +
-      ggtitle(paste0(network, ", pearson_corr = ",  round(cor(decoup_per_tf$mean_act, decoup_per_tf$targets), digits = 2))) +
-      theme_bw()
+ggplot(TF_df %>% filter(network == "dorothea"), aes(x=benchmark, y=Freq, fill=network)) +
+  geom_boxplot() +
+  geom_signif(comparisons = list(c("TF in benchmark", "TF not in benchmark")),
+              map_signif_level=TRUE)
 
-  })
 
-  pdf(paste0("figures/final_comp/new/bias/bias_meanAct_", method_filter, "_", n_permutations, ".pdf"), width = 10, height = 20)
-  print(cowplot::plot_grid(plotlist = bias_meanAct_p, ncol = 2))
-  dev.off()
-
-  # Check activity for specific TFs
-
-  bias_perTF_p <- map(names(decoupler_res), function(network){
-    net <- final_networks[[network]]
-    decoupler_res_df <- decoupler_res[[network]]
-    nTargets <- table(net$source) %>%
-      as.data.frame() %>%
-      rename("source" = Var1)
-
-    decoup <- left_join(decoupler_res_df, nTargets, by = "source")
-    decoup <- decoup %>% filter(!(is.na(Freq)))
-
-    decoup <- decoup %>% mutate(Freq_range = case_when(Freq < 10 ~ "< 10",
-                                                       Freq >= 10 & Freq < 20 ~ "10-19",
-                                                       Freq >= 20 & Freq < 30 ~ "20-29",
-                                                       Freq >= 30 & Freq < 50 ~ "30-49",
-                                                       Freq >= 50 & Freq < 100 ~ "50-99",
-                                                       Freq >= 100 & Freq < 200 ~ "100-199",
-                                                       Freq >= 200  ~ "> 200"))
-    TFs_freq_range <- decoup %>% filter(statistic == method_filter) %>% group_split(Freq_range)
-    set.seed(123)
-    TFs_random <- map(TFs_freq_range, function(x){
-      sample(unique(x$source), 4)})  %>% unlist()
-
-    boxplot_df <- decoup %>% filter(statistic == method_filter) %>% filter(source %in% TFs_random) %>% arrange(Freq)
-    boxplot_df$Freq_range <- factor(boxplot_df$Freq_range, levels = unique(boxplot_df$Freq_range))
-
-    ggplot(boxplot_df, aes(x=Freq_range, y=abs(score), fill=source)) +
-      geom_boxplot() + ggtitle(network) +
-      theme_bw()
-  })
-
-  pdf(paste0("figures/final_comp/new/bias/bias_perTF_", method_filter, "_", n_permutations, ".pdf"), width = 20, height = 40)
-  print(cowplot::plot_grid(plotlist = bias_perTF_p, ncol = 2))
-  dev.off()
+## Test bias ------------------------------------------------
+# correlation per experiment
+split_func <- function(x, by) {
+  r <- diff(range(x))
+  out <- seq(0, r - by - 1, by = by)
+  c(round(min(x) + c(0, out - 0.51 + (max(x) - max(out)) / 2), 0), max(x))
 }
 
 
-all_bias_plots(decoupler_res = decoupler_res_100, n_permutations = "100", method_filter = "ulm")
+test2 <- act_df %>% filter(network == "collecTRI") %>% arrange(desc(Freq))
 
-all_bias_plots(decoupler_res = decoupler_res_100, n_permutations = "100", method_filter = "mlm")
+test2$source <- factor(test2$source, levels = unique(test2$source))
 
-all_bias_plots(decoupler_res = decoupler_res_100, n_permutations = "100", method_filter = "norm_wsum")
-all_bias_plots(decoupler_res = decoupler_res_1000, n_permutations = "1000", method_filter = "norm_wsum")
-all_bias_plots(decoupler_res = decoupler_res_2000, n_permutations = "2000", method_filter = "norm_wsum")
+ggplot(test2, aes(x = source, y = abs(act))) +
+  geom_boxplot()
+test2 %>% group_by(source) %>% summarise(targets = mean(Freq))
 
-all_bias_plots(decoupler_res = decoupler_res_100, n_permutations = "100", method_filter = "consensus")
-all_bias_plots(decoupler_res = decoupler_res_1000, n_permutations = "1000", method_filter = "consensus")
-all_bias_plots(decoupler_res = decoupler_res_2000, n_permutations = "2000", method_filter = "consensus")
+test <- map_dfr(names(act), function(act_i){
+  act_df <- act[[act_i]] %>%
+    pivot_longer(!...1,
+                 names_to = "source",
+                 values_to = "act"
+    )
+
+  if(str_detect(string = act_i, pattern = "collecTRI")){
+    act_df <- act_df %>% left_join(TF_df %>% filter(network == "collecTRI"), by = "source")
+  } else if (str_detect(string = act_i, pattern = "doro")){
+    act_df <- act_df %>% left_join(TF_df %>% filter(network == "dorothea"), by = "source")
+  }
+
+  map_dfr(unique(act_df$...1), function(exp){
+    df_exp <- act_df %>% filter(...1 == exp)
+    data.frame(experiment = exp,
+               pearson.cor = cor(abs(df_exp$act), df_exp$Freq, method = "pearson"),
+               network = act_i)
+  })
+})
+
+ggplot(test, aes(x = network, y = pearson.cor)) +
+  geom_boxplot()
+
+map(names(act)[3:4], function(act_i){
+  act_df <- act[[act_i]] %>% column_to_rownames("...1")
+  act_summarized <- map_dfr(1:ncol(act_df), function(col_i){
+    data.frame(source = colnames(act_df)[col_i],
+               median = mean(abs(act_df[[col_i]])),
+               std = sd(abs(act_df[[col_i]])))
+  }) %>%
+    arrange(desc(median))
+
+  if(str_detect(string = act_i, pattern = "collecTRI")){
+    act_summarized <- left_join(act_summarized, TF_df %>% filter(network == "collecTRI"))
+  } else if (str_detect(string = act_i, pattern = "doro")){
+    act_summarized <- left_join(act_summarized, TF_df %>% filter(network == "dorothea"))
+  }
+
+  ggplot(act_summarized, aes(x = log(Freq), y= std)) +
+    geom_point() +
+    ggtitle(paste(act_i,
+                  "spearman",
+                  cor(log(act_summarized$Freq), act_summarized$std, method = "spearman") %>% round(digits = 3),
+                  "pearson",
+                  cor(log(act_summarized$Freq), act_summarized$std, method = "pearson") %>% round(digits = 3),
+                  sep = " "))
+
+
+})

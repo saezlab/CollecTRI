@@ -26,6 +26,8 @@ chea_remap <- chea %>%
 
 collecTRI <- read_csv("output/040722/02_signed_networks/strict_signed_CollecTRI.csv")
 
+merged <- read_csv("output/040722/06_merged_network/redo_unknowns_doro_collecTRI.csv")
+
 networks <- list(doro = doro,
                  regnet = regnet,
                  chea_arch = chea_arch,
@@ -42,6 +44,8 @@ networks <- list(doro = doro,
 #                 collecTRI = collecTRI)
 
 ## Figure 1 coverage ---------------------------
+### 1.1 Overview construction of GRN
+
 ### 1.2 coverage compared to other networks
 TFs <- map(networks, function(x){table(x$source) %>% as.data.frame() %>% mutate(Freq = 1)})
 TF_df <- TFs %>% reduce(full_join, by = "Var1")
@@ -343,10 +347,161 @@ p_2.5 <- ggplot(signed_source_summarized, aes(color=Network, y=mcauprc, x=mcauro
         axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
         panel.spacing=unit(0.1,'cm'))
 
-pdf("figures/manuscript/p_2.5.pdf", width = 4.2, height = 3.5)
+pdf("figures/manuscript/p2.5.pdf", width = 4.2, height = 3.5)
 p_2.5 + theme(legend.position = "none")
 dev.off()
 
-pdf("figures/manuscript/p_2.5_legend.pdf", width = 5.2, height = 3.5)
+pdf("figures/manuscript/p2.5_legend.pdf", width = 5.2, height = 3.5)
 p_2.5 + theme(legend.position = "bottom")
 dev.off()
+
+## Figure 3 merge dorothea ---------------------------
+### 3.1 Coverage Dorothea CollecTRI
+TFplot.df <- data.frame(size = c(unique(doro$source) %>% length(),
+                               unique(collecTRI$source) %>% length(),
+                               sum(unique(merged$source) %in% unique(doro$source) &
+                                     unique(merged$source) %in% unique(collecTRI$source)),
+                               sum(unique(merged$source) %in% unique(doro$source) &
+                                     !unique(merged$source) %in% unique(collecTRI$source)),
+                               sum(!unique(merged$source) %in% unique(doro$source) &
+                                     unique(merged$source) %in% unique(collecTRI$source))
+                               ),
+                      network = c("dorothea", "collecTRI", rep("merged", times = 3)),
+                      fill = c("dorothea", "collecTRI", "shared", "dorothea", "collecTRI")
+                      )
+TFplot.df$network <- factor(TFplot.df$network, levels = c("dorothea", "collecTRI", "merged"))
+
+InteractionsPlot.df <- data.frame(size = c(nrow(doro),
+                                           nrow(collecTRI),
+                                           sum(paste0(merged$source, merged$target) %in% paste0(doro$source, doro$target) &
+                                                 paste0(merged$source, merged$target) %in% paste0(collecTRI$source, collecTRI$target)),
+                                           sum(paste0(merged$source, merged$target) %in% paste0(doro$source, doro$target) &
+                                                 !paste0(merged$source, merged$target) %in% paste0(collecTRI$source, collecTRI$target)),
+                                           sum(!paste0(merged$source, merged$target) %in% paste0(doro$source, doro$target) &
+                                                 paste0(merged$source, merged$target) %in% paste0(collecTRI$source, collecTRI$target))),
+                                 network = c("dorothea", "collecTRI", rep("merged", times = 3)),
+                                 fill = c("dorothea", "collecTRI", "shared", "dorothea", "collecTRI")
+)
+InteractionsPlot.df$network <- factor(InteractionsPlot.df$network, levels = c("dorothea", "collecTRI", "merged"))
+
+
+
+cbp1 <- c("#b2c6e8", "#B2E1E8", "#E8B2E1")
+
+
+p3.1.1 <- ggplot(data=TFplot.df, aes(x=network, y=size, fill=fill)) +
+  geom_bar(stat="identity", width = 0.7) +
+  theme_minimal() + xlab("TFs") + ylab("Total Size")+
+  theme(legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        text = element_text(size = 9)) + scale_fill_manual(values = cbp1)
+
+
+p3.1.2 <- ggplot(data=InteractionsPlot.df, aes(x=network, y=size, fill=fill)) +
+  geom_bar(stat="identity", width = 0.7) +
+  theme_minimal() + xlab("Interactions") + ylab("Total Size")+
+  theme(legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        text = element_text(size = 9)) + scale_fill_manual(values = cbp1)
+
+
+
+pdf("figures/manuscript/p3.1.1.pdf", width = 1.9, height = 2)
+p3.1.1 + theme(legend.position = "none")
+dev.off()
+
+pdf("figures/manuscript/p3.1.2.pdf", width = 1.9, height = 3)
+p3.1.2 + theme(legend.position = "none")
+dev.off()
+
+pdf("figures/manuscript/p3.1_legend.pdf", width = 4, height = 3)
+p3.1.2 + theme(legend.position = "bottom")
+dev.off()
+
+
+### 3.2 Merged benchmark
+bench_merged_res <- read_csv("output/040722/benchmark/merged_res.csv")
+bench_merged_res <- bench_merged_res %>%
+  filter(net %in% c("ABC", "collecTRI", "redo_unknown_merge", "random_merge")) %>%
+  mutate(net = recode(net, ABC = "Dorothea ABC", redo_unknown_merge = "collecTRI + dorothea", random_merge = "collecTRI + random dorothea"))
+order_net <- bench_merged_res %>%
+  filter(method == "consensus_estimate") %>%
+  filter(metric == "mcauroc") %>%
+  group_by(net) %>%
+  summarize(mean = median(score)) %>%
+  arrange(desc(mean))
+bench_merged_res$net <- factor(bench_merged_res$net, levels = rev(order_net$net))
+p_3.2.1 <- bench_merged_res %>%
+  filter(method == "consensus_estimate") %>%
+  filter(metric == "mcauroc") %>%
+  ggplot(aes(x=net, y=score, fill=net)) +
+  geom_boxplot(outlier.size=0.2, lwd=0.2) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        legend.position="none",
+        text = element_text(size = 9)) +
+  geom_hline(yintercept=0.5, linetype="dashed", color = "black", alpha = 0.7) +
+  ylab("AUROC") +
+  xlab("")
+
+p_3.2.2 <- bench_merged_res %>%
+  filter(method == "consensus_estimate") %>%
+  filter(metric == "mcauprc") %>%
+  ggplot(aes(x=net, y=score, fill=net)) +
+  geom_boxplot(outlier.size=0.2, lwd=0.2) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        legend.position="none",
+        text = element_text(size = 9)) +
+  geom_hline(yintercept=0.5, linetype="dashed", color = "black", alpha = 0.7) +
+  ylab("AUPRC") +
+  xlab("")
+
+pdf("figures/manuscript/p3.2.1.pdf", width = 2.5, height = 2.7)
+p_3.2.1
+dev.off()
+
+pdf("figures/manuscript/p3.2.2.pdf", width = 2.5, height = 2.7)
+p_3.2.2
+dev.off()
+
+### 3.3 Merged benchmark per source
+bench_merged_source_res <- read_csv("output/040722/benchmark/merged_source_res.csv")
+bench_merged_source_res <- bench_merged_source_res %>%
+  filter(net %in% c("ABC", "collecTRI", "redo_unknown_merge", "random_merge")) %>%
+  mutate(net = recode(net, ABC = "Dorothea ABC", redo_unknown_merge = "collecTRI + dorothea", random_merge = "collecTRI + random dorothea"))
+
+merged_source_summarized <- bench_merged_source_res %>%
+  filter(method == "consensus_estimate") %>%
+  filter(metric %in% c("mcauprc", "mcauroc")) %>%
+  group_by(net, source, metric) %>%
+  summarise(mean = mean(score)) %>%
+  pivot_wider(names_from = metric, values_from = mean) %>%
+  rename("Network" = "net")
+
+merged_source_summarized$Network <- factor(merged_source_summarized$Network, levels = rev(order_net$net))
+
+p_3.3 <- ggplot(merged_source_summarized, aes(color=Network, y=mcauprc, x=mcauroc)) +
+  geom_point(position=position_jitter(h=0.01,w=0.01), size = 0.6) +
+  geom_vline(xintercept=0.5, linetype="dashed", color = "black", alpha = 0.4) +
+  geom_hline(yintercept=0.5, linetype="dashed", color = "black", alpha = 0.4) +
+  theme_bw() +
+  facet_wrap(~source, strip.position = "top") +
+  theme(strip.background = element_blank(),
+        strip.placement = "outside")+
+  ylab("AUPRC") +
+  xlab("AUROC")  +
+  theme(text = element_text(size = 9),
+        legend.key.size = unit(0.3, "cm"),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        panel.spacing=unit(0.1,'cm'))
+
+pdf("figures/manuscript/p3.3.pdf", width = 6.2, height = 3.5)
+p_3.3
+dev.off()
+
+pdf("figures/manuscript/p3.3_legend.pdf", width = 5.2, height = 3.5)
+p_3.3 + theme(legend.position = "bottom")
+dev.off()
+
+
