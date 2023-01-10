@@ -5,8 +5,13 @@
 
 library(tidyverse)
 library(UpSetR)
+library(ggsignif)
+library(rstatix)
+library(ggpubr)
 
-## Load networks---------------------------
+## Load data---------------------------
+file.version <- "040722"
+### networks
 doro <- read_csv("data/raw/dorothea_ABC.csv") %>%
   select(-...1)
 regnet <- read_csv("data/raw/regnetwork.csv")
@@ -38,10 +43,13 @@ networks <- list(doro = doro,
                  chea_remap = chea_remap,
                  collecTRI = collecTRI)
 
-#networks <- list(doro = doro,
-#                 regnet = regnet,
-#                 chea = chea,
-#                 collecTRI = collecTRI)
+### meta data benchmark
+obs <- read_csv('data/knockTF_meta.csv')
+
+### TF activities
+decoupler_path <- list.files(file.path("output", file.version, "decoupler"), full.names = T)
+act <-  map(decoupler_path, read_csv)
+names(act) <-  str_remove(list.files(file.path("output", file.version, "decoupler")), "_consensus.csv")
 
 ## Figure 1 coverage ---------------------------
 ### 1.1 Overview construction of GRN
@@ -386,7 +394,7 @@ InteractionsPlot.df$network <- factor(InteractionsPlot.df$network, levels = c("d
 
 
 
-cbp1 <- c("#b2c6e8", "#B2E1E8", "#E8B2E1")
+#cbp1 <- c("#b2c6e8", "#B2E1E8", "#E8B2E1")
 
 
 p3.1.1 <- ggplot(data=TFplot.df, aes(x=network, y=size, fill=fill)) +
@@ -394,7 +402,7 @@ p3.1.1 <- ggplot(data=TFplot.df, aes(x=network, y=size, fill=fill)) +
   theme_minimal() + xlab("TFs") + ylab("Total Size")+
   theme(legend.title = element_blank(),
         legend.key.size = unit(0.3, "cm"),
-        text = element_text(size = 9)) + scale_fill_manual(values = cbp1)
+        text = element_text(size = 9)) #+ scale_fill_manual(values = cbp1)
 
 
 p3.1.2 <- ggplot(data=InteractionsPlot.df, aes(x=network, y=size, fill=fill)) +
@@ -402,15 +410,15 @@ p3.1.2 <- ggplot(data=InteractionsPlot.df, aes(x=network, y=size, fill=fill)) +
   theme_minimal() + xlab("Interactions") + ylab("Total Size")+
   theme(legend.title = element_blank(),
         legend.key.size = unit(0.3, "cm"),
-        text = element_text(size = 9)) + scale_fill_manual(values = cbp1)
+        text = element_text(size = 9)) #+ scale_fill_manual(values = cbp1)
 
 
 
-pdf("figures/manuscript/p3.1.1.pdf", width = 1.9, height = 2)
+pdf("figures/manuscript/p3.1.1.pdf", width = 1.9, height = 1.7)
 p3.1.1 + theme(legend.position = "none")
 dev.off()
 
-pdf("figures/manuscript/p3.1.2.pdf", width = 1.9, height = 3)
+pdf("figures/manuscript/p3.1.2.pdf", width = 2, height = 2.7)
 p3.1.2 + theme(legend.position = "none")
 dev.off()
 
@@ -505,3 +513,105 @@ p_3.3 + theme(legend.position = "bottom")
 dev.off()
 
 
+## Supp 1 weights ---------------------------
+### S1.1 Weighting strategy
+
+
+## Supp 2 Bias ---------------------------
+### S2.1 Size difference between TFs in benchmark and background
+msk <- obs$logFC < -1
+obs_filtered <- obs[msk,]
+
+TFs_bench <- obs_filtered$TF %>% unique()
+
+TFs_collecTRI <- table(collecTRI$source) %>% as.data.frame() %>%
+  add_column(network = "collecTRI")
+TFs_doro <- table(doro$source) %>% as.data.frame() %>%
+  add_column(network = "dorothea")
+TFs_regnet <- table(regnet$source) %>% as.data.frame() %>%
+  add_column(network = "regnet")
+
+
+TF_df <- rbind(TFs_collecTRI, TFs_doro, TFs_regnet) %>%
+  mutate(benchmark = case_when(
+    Var1 %in% TFs_bench ~ "TF in benchmark",
+    !Var1 %in% TFs_bench ~ "TF not in benchmark"
+  )) %>%
+  rename("source" = "Var1") %>%
+  rename("nTargets" = "Freq") %>%
+  filter(nTargets >= 5)
+
+TF_df$network <- as.factor(TF_df$network)
+
+stat.test <- TF_df %>%
+  group_by(network) %>%
+  t_test(nTargets ~ benchmark) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj") %>%
+  add_xy_position(x = "network", dodge = 0.8)
+
+p_S2.1 <- ggboxplot(TF_df, x = "network", y = "nTargets", fill = "benchmark", outlier.size=0.2, lwd=0.2) +
+  theme_minimal() +
+  stat_pvalue_manual(stat.test,  label = "p.adj.signif",
+                     tip.length = 0.01, bracket.nudge.y = -2) +
+  theme(text = element_text(size = 9),
+        legend.key.size = unit(0.4, "cm")) +
+  xlab("TFs") +
+  ylab("Number of targets")
+
+
+pdf("figures/manuscript/pS2.1.pdf", width = 6, height = 2.7)
+p_S2.1
+dev.off()
+
+### S2.2 Correlation per exp
+# correlation per experiment
+cor_perExp <- map_dfr(names(act), function(act_i){
+  act_df <- act[[act_i]] %>%
+    pivot_longer(!...1,
+                 names_to = "source",
+                 values_to = "act"
+    )
+
+  if(str_detect(string = act_i, pattern = "collecTRI")){
+    act_df <- act_df %>% left_join(TF_df %>% filter(network == "collecTRI"), by = "source")
+  } else if (str_detect(string = act_i, pattern = "doro")){
+    act_df <- act_df %>% left_join(TF_df %>% filter(network == "dorothea"), by = "source")
+  } else if (str_detect(string = act_i, pattern = "regnet")){
+    act_df <- act_df %>% left_join(TF_df %>% filter(network == "regnet"), by = "source")
+  }
+
+  act_df <- act_df %>%
+    filter(!is.na(act))
+  map_dfr(unique(act_df$...1), function(exp){
+    df_exp <- act_df %>% filter(...1 == exp)
+    data.frame(experiment = exp,
+               pearson.cor = cor(abs(df_exp$act), df_exp$nTargets, method = "pearson"),
+               network = act_i)
+  })
+})
+
+# %>% filter(network != "collecTRI_rand")
+labels_plot <- cor_perExp %>%
+  group_by(network) %>%
+  summarise(mean_cor = round(mean(pearson.cor), digits = 2)) %>%
+  pull(mean_cor) %>%
+  paste0("mean(r) = ", .)
+names(labels_plot) <- unique(cor_perExp %>% pull(network))
+
+
+p_S2.2 <- ggplot(cor_perExp ,
+            aes(x = pearson.cor, fill = network) ) +
+  geom_histogram(bins = 50) +
+  theme_minimal() +
+  theme(text = element_text(size = 9),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = "bottom") +
+  xlab("pearson correlation (r)") +
+  ylab("Number of experiments") +
+  facet_grid(. ~ network, labeller = as_labeller(labels_plot))
+
+
+pdf("figures/manuscript/pS2.2.pdf", width = 6, height = 3)
+p_S2.2
+dev.off()
