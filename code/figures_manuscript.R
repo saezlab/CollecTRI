@@ -322,10 +322,6 @@ pdf("figures/manuscript/p2.3.pdf", width = 6.2, height = 3)
 p_2.3
 dev.off()
 
-pdf("figures/manuscript/p2.3_legend.pdf", width = 5.2, height = 4.5)
-p_2.3 + theme(legend.position = "bottom")
-dev.off()
-
 ## Figure 3 merge dorothea ---------------------------
 ### 3.1 Coverage Dorothea CollecTRI
 TFplot.df <- data.frame(size = c(unique(doro$source) %>% length(),
@@ -491,18 +487,27 @@ TFs_doro <- table(doro$source) %>% as.data.frame() %>%
   add_column(network = "dorothea")
 TFs_regnet <- table(regnet$source) %>% as.data.frame() %>%
   add_column(network = "regnet")
+TFs_chea_arch <- table(chea_arch$source) %>% as.data.frame() %>%
+  add_column(network = "chea_arch")
 
 
-TF_df <- rbind(TFs_collecTRI, TFs_doro, TFs_regnet) %>%
+TF_df <- rbind(TFs_collecTRI, TFs_doro, TFs_regnet #, TFs_chea_arch
+               ) %>%
   mutate(benchmark = case_when(
     Var1 %in% TFs_bench ~ "TF in benchmark",
     !Var1 %in% TFs_bench ~ "TF not in benchmark"
   )) %>%
   rename("source" = "Var1") %>%
   rename("nTargets" = "Freq") %>%
-  filter(nTargets >= 5)
+  filter(nTargets >= 5) %>%
+  mutate(network = recode(network,
+                      dorothea = "Dorothea ABC",
+                      collecTRI = "CollecTRI",
+                      regnet = "RegNet",
+                      chea_arch = "ChEA3 ARCHS4"))
 
-TF_df$network <- as.factor(TF_df$network)
+TF_df$network <- factor(TF_df$network, levels = c("CollecTRI", "Dorothea ABC", "RegNet" #, "ChEA3 ARCHS4"
+                                                  ))
 
 stat.test <- TF_df %>%
   group_by(network) %>%
@@ -521,7 +526,7 @@ p_S2.1 <- ggboxplot(TF_df, x = "network", y = "nTargets", fill = "benchmark", ou
   ylab("Number of targets")
 
 
-pdf("figures/manuscript/pS2.1.pdf", width = 6, height = 2.7)
+pdf("figures/manuscript/pS2.1.pdf", width = 6, height = 2.5)
 p_S2.1
 dev.off()
 
@@ -535,11 +540,11 @@ cor_perExp <- map_dfr(names(act), function(act_i){
     )
 
   if(str_detect(string = act_i, pattern = "collecTRI")){
-    act_df <- act_df %>% left_join(TF_df %>% filter(network == "collecTRI"), by = "source")
+    act_df <- act_df %>% left_join(TF_df %>% filter(network == "CollecTRI"), by = "source")
   } else if (str_detect(string = act_i, pattern = "doro")){
-    act_df <- act_df %>% left_join(TF_df %>% filter(network == "dorothea"), by = "source")
+    act_df <- act_df %>% left_join(TF_df %>% filter(network == "Dorothea ABC"), by = "source")
   } else if (str_detect(string = act_i, pattern = "regnet")){
-    act_df <- act_df %>% left_join(TF_df %>% filter(network == "regnet"), by = "source")
+    act_df <- act_df %>% left_join(TF_df %>% filter(network == "RegNet"), by = "source")
   }
 
   act_df <- act_df %>%
@@ -552,6 +557,13 @@ cor_perExp <- map_dfr(names(act), function(act_i){
   })
 })
 
+cor_perExp <- cor_perExp %>%
+  mutate(network = recode(network,
+                          collecTRI_agnostic = "CollecTRI agnostic",
+                          collecTRI_signed = "CollecTRI",
+                          doro = "Dorothea ABC",
+                          regnet = "RegNet")) %>%
+  filter(network %in% c("CollecTRI", "Dorothea ABC", "RegNet"))
 # %>% filter(network != "collecTRI_rand")
 labels_plot <- cor_perExp %>%
   group_by(network) %>%
@@ -567,7 +579,7 @@ p_S2.2 <- ggplot(cor_perExp ,
   theme_minimal() +
   theme(text = element_text(size = 9),
         legend.key.size = unit(0.4, "cm"),
-        legend.position = "bottom") +
+        legend.position = "right") +
   xlab("pearson correlation (r)") +
   ylab("Number of experiments") +
   facet_grid(. ~ network, labeller = as_labeller(labels_plot))
