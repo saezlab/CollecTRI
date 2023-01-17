@@ -26,7 +26,7 @@ dir.create(file.path("data", "promoter_sequence"), showWarnings = FALSE)
 
 if (length(list.files(file.path("data", "promoter_sequence"),
                       pattern = paste0("prom_sequence_", prom_length, ".rds"), )) == 0){
-  prom_sequence <- getPromSeq(genes = unique(GRN$target), n_upstream = 1000)
+  prom_sequence <- getPromSeq(genes = unique(GRN$target), n_upstream = as.numeric(prom_length))
   saveRDS(prom_sequence, file.path("data", "promoter_sequence", paste0("prom_sequence_", prom_length, ".rds")))
 } else {
   prom_sequence <- readRDS(file.path("data", "promoter_sequence", paste0("prom_sequence_", prom_length, ".rds")))
