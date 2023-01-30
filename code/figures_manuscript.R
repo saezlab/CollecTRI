@@ -8,6 +8,8 @@ library(UpSetR)
 library(ggsignif)
 library(rstatix)
 library(ggpubr)
+library(MLeval)
+library(caret)
 
 ## Load data---------------------------
 file.version <- "040722"
@@ -228,8 +230,25 @@ dev.off()
 
 ## Figure 2 systematic comparison ---------------------------
 ### 2.1 Overview benchmark
+# load data and run Caret
+data(Sonar)
+ctrl <- trainControl(method="cv", summaryFunction=twoClassSummary, classProbs=T,
+                     savePredictions = T)
+fit1 <- train(Class ~ .,data=Sonar,method="rf",trControl=ctrl)
 
-### 2.1 Benchmark
+# run MLeval
+res <- evalm(list(fit1),gnames=c('rf'))
+
+pdf("figures/manuscript/p2.1.1.pdf", width = 6, height = 3)
+plot(res$roc)
+dev.off()
+
+pdf("figures/manuscript/p2.1.2.pdf", width = 6, height = 3)
+plot(res$prg)
+dev.off()
+
+
+### 2.2 Benchmark
 bench_agnositc_res <- read_csv("output/040722/benchmark/agnositc_res.csv")
 bench_agnositc_res <- bench_agnositc_res %>%
   filter(!net == "collecTRI") %>%
@@ -277,11 +296,11 @@ p_2.2.2 <- bench_agnositc_res %>%
   ylab("AUPRC") +
   xlab("")
 
-pdf("figures/manuscript/p2.2.1.pdf", width = 3, height = 2)
+pdf("figures/manuscript/p2.2.1.pdf", width = 2.6, height = 2)
 p_2.2.1
 dev.off()
 
-pdf("figures/manuscript/p2.2.2.pdf", width = 3, height = 2)
+pdf("figures/manuscript/p2.2.2.pdf", width = 2.6, height = 2)
 p_2.2.2
 dev.off()
 
@@ -304,7 +323,7 @@ signed_source_summarized <- bench_signed_source_res %>%
 signed_source_summarized$Network <- factor(signed_source_summarized$Network, levels = rev(order_net$net))
 
 p_2.3 <- ggplot(signed_source_summarized, aes(color=Network, y=mcauprc, x=mcauroc)) +
-  geom_point(position=position_jitter(h=0.01,w=0.01), size = 0.6) +
+  geom_point(position=position_jitter(h=0.02,w=0.02), size = 1) +
   geom_vline(xintercept=0.5, linetype="dashed", color = "black", alpha = 0.4) +
   geom_hline(yintercept=0.5, linetype="dashed", color = "black", alpha = 0.4) +
   theme_bw() +
@@ -450,7 +469,7 @@ merged_source_summarized$Network <- factor(merged_source_summarized$Network, lev
 obs_filtered
 
 p_3.3 <- ggplot(merged_source_summarized, aes(color=Network, y=mcauprc, x=mcauroc)) +
-  geom_point(position=position_jitter(h=0.01,w=0.01), size = 0.6) +
+  geom_point(position=position_jitter(h=0.02,w=0.02), size = 1) +
   geom_vline(xintercept=0.5, linetype="dashed", color = "black", alpha = 0.4) +
   geom_hline(yintercept=0.5, linetype="dashed", color = "black", alpha = 0.4) +
   theme_bw() +
@@ -620,3 +639,12 @@ p_2.2 <- ggplot(data=sign_decision_df, aes(x=forcats::fct_rev(decision), y=n, fi
   theme(text = element_text(size = 9),
         legend.key.size = unit(0.3, "cm")) + coord_flip() +
   guides(fill=guide_legend(title=""))
+
+## Methods TFs covered in benchmark ---------------------------
+TFs_in_bench <- map_dfr(names(networks), function(name_net){
+  net <- networks[[name_net]]
+  data.frame(network = name_net,
+             n_TFs = sum(unique(net$source) %in% obs_filtered$TF))
+})
+
+write_csv(TFs_in_bench %>% arrange(network), "figures/manuscript/table_TFs_in_benchmark.csv")
