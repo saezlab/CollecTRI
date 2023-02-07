@@ -115,6 +115,21 @@ homogenized_table <- get_homogenized_table(NTNU_compiled_raw)
 
 
 ## Remove TFs with uncertain role ---------------------------
+info.TFs <- readxl::read_excel("data/CollecTRI_TF-role_new_draft_211122.xlsx", sheet = "TF_categ_sign_all_resourceInfo")
+info.TFs <- info.TFs %>%
+  filter(!is.na(TFC2_Associated.Gene.Name...1))
+# rename TFs with new HGNC
+TFs_to_rename <- info.TFs[str_detect(info.TFs$Ass_name_CollecTRI, "has new"),]
+
+homogenized_table <- homogenized_table %>%
+  mutate(TF = map_chr(str_split(TF.TG, ":"), 1)) %>%
+  mutate(TG = map_chr(str_split(TF.TG, ":"), 2)) %>%
+  mutate(TF = recode(TF,
+                    T = "TBXT",
+                    AES = "TLES")) %>%
+  mutate(TF.TG = paste(TF, TG, sep = ":")) %>%
+  select(-c(TF, TG))
+
 all.keywords <- readxl::read_excel("data/CollecTRI_TF-role_new_draft_211122.xlsx") %>%
   rename("TF" = "TFC2_Associated.Gene.Name",
          "strict" = "STRICT_agreement (GO/UniProt-StructureFunction)",
@@ -122,13 +137,14 @@ all.keywords <- readxl::read_excel("data/CollecTRI_TF-role_new_draft_211122.xlsx
          "relaxed_SF" =  "RELAXED - StructureFunction (STRICT_add KRAB/Soto)",
          "relaxed" = "RELAXED_KB OR StructureFunction")
 
-rm.TFs <- all.keywords %>%
-  filter(TF_category %in% c("uncertain TF role", "likely coTF")) %>%
-  pull(TF)
+keep.TFs <- all.keywords %>%
+  filter(TF_category %in% c("dbTF", "coTF (GO:0003712)", "GTF (GO:0140223)")) %>%
+  pull(TF) %>%
+  append(c("AP1", "NFKB")) #keep Dimers
 
 homogenized_table <- homogenized_table %>%
   mutate(TF = map_chr(str_split(TF.TG, ":"), 1)) %>%
-  filter(!TF %in% rm.TFs) %>%
+  filter(TF %in% keep.TFs) %>%
   select(-TF)
 
 ## Save homogenized table ---------------------------
