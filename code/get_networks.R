@@ -1,23 +1,3 @@
-# from Pau
-
-get_Lambert <- function(path){
-  # Download Lambert list of TFs
-  url <- 'https://ars.els-cdn.com/content/image/1-s2.0-S0092867418301065-mmc2.xlsx'
-  fname <- file.path(path, 'lambert.csv')
-  download.file(url, fname)
-  Sys.sleep(1)
-
-  # Select the ones annotated as TF
-  df <- readxl::read_xlsx(fname, sheet=2, skip=1)
-  df <- dplyr::select(df, Name, `...4`)
-  df <- dplyr::filter(df, `...4`=='Yes')
-  df <- dplyr::select(df, Name)
-
-  # Write
-  write.csv2(df, file.path(path, 'lambert.csv'), row.names=F)
-}
-
-
 filter_by_Lambert <- function(df, path){
   # Read TFs
   fname=file.path(path, 'lambert.csv')
@@ -29,15 +9,15 @@ filter_by_Lambert <- function(df, path){
 get_regnetwork <- function(path, confs=c('High', 'Medium', 'Low')){
   temp <- tempfile()
   download.file("https://regnetworkweb.org/download/human.zip",temp)
-  data <- read.table(unz(temp, "human.source"))
+  df <- read.table(unz(temp, "human.source"))
   unlink(temp)
 
-  colnames(data) <- c('tf', 'weight', 'target', 'likelihood')
-  data['weight'] <- 1
-  data <- data[, -which(names(data) %in% c("likelihood"))]
+  colnames(df) <- c('tf', 'weight', 'target', 'likelihood')
+  df['weight'] <- 1
+  df <- df[, -which(names(df) %in% c("likelihood"))]
 
   # Filter by Lambert
-  #df <- filter_by_Lambert(data, path)
+  #df <- filter_by_Lambert(df, path)
 
   # Remove miRNA targets
   df <- dplyr::filter(df, !grepl('hsa-', target))
@@ -145,6 +125,23 @@ get_chea3 <- function(path){
   }
 }
 
+get_pathwayCommons <- function(path){
+  url <- 'https://www.pathwaycommons.org/archives/PC2/v11/PathwayCommons11.All.hgnc.sif.gz'
+  fname <- file.path(path, 'raw', 'pathwaycommons.sif.gz')
+  download.file(url, fname)
+  Sys.sleep(1)
+
+  pathwayCommons <- read.table(file.path(path, 'raw', 'pathwaycommons.sif.gz'), header = F)
+
+  pathwayCommons <- dplyr::rename(pathwayCommons, "weight" = V2, "source" = V1, "target" = V3)
+  pathwayCommons <- dplyr::filter(pathwayCommons, weight == "controls-expression-of")
+  pathwayCommons <- dplyr::mutate(pathwayCommons, weight = 1)
+  pathwayCommons <- cbind(pathwayCommons, data.frame(mor = 1))
+
+  # Write
+  readr::write_csv(pathwayCommons, file.path(path, 'pathwayCommons.csv'))
+}
+
 
 
 get_data <- function(path){
@@ -152,11 +149,11 @@ get_data <- function(path){
   dir.create(path, showWarnings = F, recursive = T)
 
   # Get networks
-  get_Lambert(path)
   get_regnetwork(path)
   get_chea3(path)
+  get_pathwayCommons(path)
 }
 
 
 # Run
-get_data('data/raw')
+get_data('data/networks')
