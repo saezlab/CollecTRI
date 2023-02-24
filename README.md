@@ -1,4 +1,4 @@
-# CollecTRI: *Collec*tion of *T*ranscriptional *R*egulatory *I*nteractions <img src="man/figures/collecTRI_logo_tmp.png" align="right" width="120" />
+# CollecTRI: **Collec**tion of **T**ranscriptional **R**egulatory **I**nteractions <img src="man/figures/CollecTRI_logo_tmp.png" align="right" width="120" />
 
 <!-- badges: start -->
 <!-- badges: end -->
