@@ -1,4 +1,5 @@
-# CollecTRI: **Collec**tion of **T**ranscriptional **R**egulatory **I**nteractions <img src="man/figures/CollecTRI_logo_tmp.png" align="right" width="120" />
+<img src="man/figures/CollecTRI_logo_tmp.png" align="right" width="120" />
+# CollecTRI: **Collec**tion of **T**ranscriptional **R**egulatory **I**nteractions 
 
 <!-- badges: start -->
 <!-- badges: end -->
@@ -14,8 +15,9 @@ superior performance compared to other known GRNs.
 ## Data availability 
 
 CollecTRI is available through 
-[OmniPath](http://bioconductor.org/packages/release/data/experiment/html/dorothea.html) 
-or can be accessed through the DoRothEA bioconductor package.
+[OmniPath] or the 
+[DoRothEA](http://bioconductor.org/packages/release/data/experiment/html/dorothea.html) 
+bioconductor package.
 
 ## License
 
