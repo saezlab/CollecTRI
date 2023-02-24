@@ -1,9 +1,24 @@
-# NTNUdecoupleR
+# CollecTRI: *Collec*tion of *T*ranscriptional *R*egulatory *I*nteractions <img src="man/figures/collecTRI_logo_tmp.png" align="right" width="120" />
 
-Curated network from Eirini
+<!-- badges: start -->
+<!-- badges: end -->
 
-Plan:
-1. Generate regulatory network from Eirini's curation
-2. Run Decoupler in agnostic mode, weighted mode, signed mode and signed&weighted mode
+## Overview
+CollecTRI is a gene regulatory network (GRN) containing signed transcription factor
+(TF) - target gene interactions. TF-gene interactions were manually curated and 
+collected from ExTRI, HTRI, TRRUST, TFActS, IntAct, SIGNOR, CytReg, GEREDB and 
+Pavlidis. CollecTRI was benchmarked using the knockTF datasets and showed a
+superior performance compared to other known GRNs.
 
-Will try different methods to generate signs and weights for interactions in the network
+
+## Data availability 
+
+CollecTRI is available through 
+[OmniPath](http://bioconductor.org/packages/release/data/experiment/html/dorothea.html) 
+or can be accessed through the DoRothEA bioconductor package.
+
+## License
+
+
+## Citation
+> 
