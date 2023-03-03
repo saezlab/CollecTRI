@@ -1,3 +1,0 @@
-[2022-09-22 11:33:52] [INFO]    [OmnipathR] Initialized cache: `/Users/smuellerdott/Library/Caches/OmnipathR`.
-[2022-09-22 11:33:52] [INFO]    [OmnipathR] Welcome to OmnipathR!
-[2022-09-22 11:39:32] [FATAL]   [OmnipathR] Downloading the entire annotations database is not allowed by default because of its huge size (>1GB). If you really want to do that, you find static files at https://archive.omnipathdb.org/. However we recommend to query a set of proteins or a few resources, depending on your interest.
