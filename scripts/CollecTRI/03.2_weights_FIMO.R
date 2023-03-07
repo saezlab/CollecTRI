@@ -99,6 +99,10 @@ fimo_res <- map_dfr(unique(GRN_filtered$source), function(source_i){
     dplyr::rename("source" = "motif_id")
 })
 
+fimo_res <- fimo_res %>%
+  mutate(edge = paste(source, target, sep = "."))
+fimo_res <- fimo_res[!duplicated(fimo_res$edge),]
+
 ## save results ---------------------------
 dir.create(file.path(output.folder, "weighted_networks"), showWarnings = FALSE)
 dir.create(file.path(output.folder, "weighted_networks", "raw"), showWarnings = FALSE)
