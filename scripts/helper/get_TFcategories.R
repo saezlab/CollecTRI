@@ -55,6 +55,12 @@ get_TFclass <- function(path){
   # Use grep to find all matching words in the lines vector
   matching_words_mouse <- grep(regex_mouse, lines, value = TRUE)
 
+  # Extract rat TFs
+  # Define the regular expression
+  regex_rat <- "Rattus_norvegicus_\\w+" #select human TFs
+  # Use grep to find all matching words in the lines vector
+  matching_words_rat <- grep(regex_rat, lines, value = TRUE)
+
   # select TF symbols
   tfs <- stringr::str_match(matching_words, "#Homo_sapiens_([[:alnum:]_-]+)")[, 2]
   tfs <- unique(tfs[!is.na(tfs) ])
@@ -62,7 +68,10 @@ get_TFclass <- function(path){
   tfs_mouse <- stringr::str_match(matching_words_mouse, "#Mus_musculus_([[:alnum:]_-]+)")[, 2]
   tfs_mouse <- unique(tfs_mouse[!is.na(tfs_mouse) ])
 
-  df <- data.frame(Name = union(tfs, tfs_mouse))
+  tfs_rat <- stringr::str_match(matching_words_rat, "Rattus_norvegicus_([[:alnum:]_-]+)")[, 2]
+  tfs_rat <- unique(tfs_rat[!is.na(tfs_rat) ])
+
+  df <- data.frame(Name = union(union(tfs, tfs_mouse), tfs_rat))
 
   # Write
   write.csv2(df, file.path(path, 'TFclass.csv'), row.names=F)
@@ -82,13 +91,38 @@ get_dbTFs <- function(path){
 }
 
 get_coTFs <- function(path){
-  # Load TFs classified as coTFs according to GO (GO:0003712)
+  # Load human TFs classified as coTFs according to GO (GO:0003712)
   fname <- file.path(path, 'raw', 'QuickGO-annotations-1676559707182-20230216.tsv')
 
-  # Select the ones annotated as TF
+  # Select the ones annotated as human TF
   df <- utils::read.table(fname, sep = "\t", header = T)
   tfs <- dplyr::pull(df, SYMBOL)
-  df <- data.frame("Name" = unique(tfs))
+
+  # mouse coTFs according to GO (GO:0003712)
+  fname_mouse <- file.path(path, 'raw', 'QuickGO-annotations-1678184433156-20230307.tsv')
+  df_mouse <- utils::read.table(fname_mouse, sep = "\t", header = T)
+  tfs_mouse <- dplyr::select(df_mouse, SYMBOL)
+
+  #conversion to human
+  human_gene_names <- OmnipathR::homologene_download(target = 9606, source = 10090, id_type = "genesymbol")
+  human_gene_names <- dplyr::rename(human_gene_names, "SYMBOL" = genesymbol_source)
+  tfs_mouse <- dplyr::left_join(tfs_mouse, human_gene_names, by = "SYMBOL", multiple = "all")
+  tfs_mouse <- dplyr::pull(tfs_mouse, genesymbol_target)
+  tfs_mouse <- tfs_mouse[!is.na(tfs_mouse)]
+
+  # rat coTFs according to GO (GO:0003712)
+  fname_rat <- file.path(path, 'raw', 'QuickGO-annotations-1678184598281-20230307.tsv')
+  df_rat <- utils::read.table(fname_rat, sep = "\t", header = T)
+  tfs_rat <- dplyr::select(df_rat, SYMBOL)
+
+  #conversion to human
+  human_gene_names <- OmnipathR::homologene_download(target = 9606, source = 10116, id_type = "genesymbol")
+  human_gene_names <- dplyr::rename(human_gene_names, "SYMBOL" = genesymbol_source)
+  tfs_rat <- dplyr::left_join(tfs_rat, human_gene_names, by = "SYMBOL", multiple = "all")
+  tfs_rat <- dplyr::pull(tfs_rat, genesymbol_target)
+  tfs_rat <- tfs_rat[!is.na(tfs_rat)]
+
+  df <- data.frame("Name" = union(union(tfs, tfs_mouse), tfs_rat))
 
   # Write
   write.csv2(df, file.path(path, 'coTF_quickGO.csv'), row.names=F)
