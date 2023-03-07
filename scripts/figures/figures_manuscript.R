@@ -33,8 +33,6 @@ chea_remap <- chea %>%
 
 collecTRI <- read_csv("output/CollecTRI/CollecTRI.csv")
 
-#merged <- read_csv("output/230223/06_merged_network/redo_unknowns_doro_collecTRI.csv")
-
 networks <- list(doro = doro,
                  regnet = regnet,
                  pathComp = pathComp,
@@ -216,6 +214,8 @@ plot_df <- data.frame(network = colnames(tmp)[1:length(networks)],
                           chea_lit = "ChEA3 Literature",
                           chea_encode = "ChEA3 ENCODE",
                           pathComp = "Pathway Commons"))
+
+plot_df %>% filter(unique == "unique")
 
 plot_df_final <- rbind(plot_df, plot_df_1)
 
@@ -540,21 +540,53 @@ p_S2.2.2
 dev.off()
 
 
-## Supp 1 weights ---------------------------
-### S1.1 Weighting strategy
-bench_weights_res <- read_csv("output/040722/benchmark/weights_res.csv")
+## Supp 3 weights ---------------------------
+### S3.1 Correlation between weighting strategy
+corr_matrix <- read_csv("output/weighted_networks/correlation_matrix.csv")%>%
+  as.data.frame()
+rownames(corr_matrix) <- colnames(corr_matrix)
+corr_matrix <- corr_matrix[rownames(corr_matrix) != "unweighted", colnames(corr_matrix) != "unweighted"]
+lower.tri(corr_matrix, diag = TRUE)
+
+annotation_df <- data.frame(method = map_chr(str_split(colnames(corr_matrix), "_"), 1),
+           `promoter length` = map_chr(str_split(colnames(corr_matrix), "_"), 2),
+           normalisation = map_chr(str_split(colnames(corr_matrix), "_"), 3)
+           ) %>%
+  mutate(normalisation = recode(normalisation,
+                                gene = "per gene",
+                                tf = "per TF",
+                                raw = "none"))
+
+rownames(annotation_df) <- colnames(corr_matrix)
+
+cor_heat <- pheatmap::pheatmap(corr_matrix, cluster_rows = T,
+                               cluster_cols = T, silent=T)
+idxRows <- cor_heat$tree_row$order
+idxCols <- cor_heat$tree_col$order
+corr_matrix <- corr_matrix[idxRows,idxCols]
+
+# Plot
+color <- colorRampPalette((RColorBrewer::brewer.pal(n = 7, name = 'Blues')))(100)
+
+mat_heat <- pheatmap::pheatmap(corr_matrix, color = color,
+                               display_numbers=F, number_color='black', border_color=NA,
+                               na_col=NA, cellwidth = 30, cellheight = 30,
+                               legend=T, fontsize = 10,
+                               show_rownames = F, show_colnames = T,treeheight_row = 0,
+                               silent=T, annotation_col = annotation_df)
+p_S3.1 <- ggplotify::as.ggplot(mat_heat)
+
+pdf("figures/manuscript/pS3.1.pdf", width = 15, height = 15)
+p_S3.1
+dev.off()
+
+### S3.2 Weighting strategy
+bench_weights_res <- read_csv("output/benchmark/benchmark_weights_res.csv")
 bench_weights_res <- bench_weights_res %>%
-  mutate(normalisation = case_when(
-    str_detect(net, "raw") ~ "raw",
-    str_detect(net, "gene") ~ "per gene",
-    str_detect(net, "tf") ~ "per TF",
-    str_detect(net, "collecTRI") ~ "raw",
-  )) %>%
-  mutate(weightingMethod = case_when(
-    str_detect(net, "collecTRI") ~ "none",
-    str_detect(net, "FIMO") ~ "FIMO",
-    str_detect(net, "matRid") ~ "matrixRider"
-  ))
+  filter(net %in% c("collecTRI", "matRid1raw")) %>%
+  mutate(net = recode(net,
+                      collecTRI = 'CollecTRI',
+                      matRid1raw = 'weighted CollecTRI'))
 
 order_net <- bench_weights_res %>%
   filter(method == "consensus_estimate") %>%
@@ -564,83 +596,67 @@ order_net <- bench_weights_res %>%
   arrange(desc(mean))
 bench_weights_res$net <- factor(bench_weights_res$net, levels = rev(order_net$net))
 
-bench_weights_res_1kb <- bench_weights_res %>%
-  filter(!str_detect(net, "10") | str_detect(net, "collecTRI"))
+t.test(bench_weights_res  %>%
+         filter(method == "consensus_estimate") %>%
+         filter(metric == "mcauroc") %>%
+         filter(net == "CollecTRI") %>%
+         pull(score), bench_weights_res  %>%
+         filter(method == "consensus_estimate") %>%
+         filter(metric == "mcauroc") %>%
+         filter(net == "weighted CollecTRI") %>%
+         pull(score))
 
-bench_weights_res_10kb <- bench_weights_res %>%
-  filter(str_detect(net, "10") | str_detect(net, "collecTRI"))
+t.test(bench_weights_res  %>%
+         filter(method == "consensus_estimate") %>%
+         filter(metric == "mcprc") %>%
+         filter(net == "CollecTRI") %>%
+         pull(score), bench_weights_res  %>%
+         filter(method == "consensus_estimate") %>%
+         filter(metric == "mcprc") %>%
+         filter(net == "weighted CollecTRI") %>%
+         pull(score))
 
-bench_weights_res
-
-p_S1.1.1 <- bench_weights_res_1kb %>%
+p_S3.2.1 <- bench_weights_res %>%
   filter(method == "consensus_estimate") %>%
   filter(metric == "mcauroc") %>%
-  ggplot(aes(x=weightingMethod, y=score, fill=normalisation)) +
+  ggplot(aes(x=net, y=score, fill=net)) +
   geom_boxplot(outlier.size=0.2, lwd=0.2) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
         text = element_text(size = 9),
+        legend.position = "none",
         legend.key.size = unit(0.3, "cm")) +
   ylab("AUROC") +
-  xlab("Weighting method")
+  xlab("")
 
-p_S1.1.2 <- bench_weights_res_1kb %>%
+p_S3.2.2 <- bench_weights_res %>%
   filter(method == "consensus_estimate") %>%
   filter(metric == "mcauprc") %>%
-  ggplot(aes(x=weightingMethod, y=score, fill=normalisation)) +
+  ggplot(aes(x=net, y=score, fill=net)) +
   geom_boxplot(outlier.size=0.2, lwd=0.2) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
         text = element_text(size = 9),
+        legend.position = "none",
         legend.key.size = unit(0.3, "cm")) +
   ylab("AUPRC") +
-  xlab("Weighting method")
+  xlab("")
 
 
-p_S1.2.1 <- bench_weights_res_10kb %>%
-  filter(method == "consensus_estimate") %>%
-  filter(metric == "mcauroc") %>%
-  ggplot(aes(x=weightingMethod, y=score, fill=normalisation)) +
-  geom_boxplot(outlier.size=0.2, lwd=0.2) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        text = element_text(size = 9),
-        legend.key.size = unit(0.3, "cm")) +
-  ylab("AUROC") +
-  xlab("Weighting method")
-
-p_S1.2.2 <- bench_weights_res_10kb %>%
-  filter(method == "consensus_estimate") %>%
-  filter(metric == "mcauprc") %>%
-  ggplot(aes(x=weightingMethod, y=score, fill=normalisation)) +
-  geom_boxplot(outlier.size=0.2, lwd=0.2) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        text = element_text(size = 9),
-        legend.key.size = unit(0.3, "cm")) +
-  ylab("AUPRC") +
-  xlab("Weighting method")
 
 
-pdf("figures/manuscript/pS1.1.1.pdf", width = 3.7, height = 2)
-p_S1.1.1
+pdf("figures/manuscript/pS3.2.1.pdf", width = 2, height = 2)
+p_S3.2.1
 dev.off()
 
-pdf("figures/manuscript/pS1.1.2.pdf", width = 3.7, height = 2)
-p_S1.1.2
+pdf("figures/manuscript/pS3.2.2.pdf", width = 2, height = 2)
+p_S3.2.2
 dev.off()
 
-pdf("figures/manuscript/pS1.2.1.pdf", width = 3.7, height = 2)
-p_S1.2.1
-dev.off()
-
-pdf("figures/manuscript/pS1.2.2.pdf", width = 3.7, height = 2)
-p_S1.2.2
-dev.off()
 
 
 ## Use weights as filtering
-bench_filtered_res <- read_csv("output/040722/benchmark/weights_filtered_res.csv")
+bench_filtered_res <- read_csv("output/benchmark/benchmark_weights_filtered_res.csv")
 bench_filtered_res <- bench_filtered_res %>%
   mutate(quantile = case_when(
     str_detect(net, "raw") ~ "full",
