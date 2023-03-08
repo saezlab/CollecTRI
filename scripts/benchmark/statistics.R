@@ -106,8 +106,6 @@ auroc.ttest <- perform.multi.ttest(auroc_mat) %>%
   mutate(p.adj = round(p.adj, digits = 2)) %>%
   select(-p.value)
 
-write_csv(auroc.ttest, "output/benchmark/bench_comp_AUROC.csv")
-
 auroc.ttest %>%
   filter(comp1 == "CollecTRI") %>%
   pull(t.value) %>%
@@ -125,8 +123,6 @@ auprc.ttest <- perform.multi.ttest(auprc_mat) %>%
   mutate(p.adj = round(p.adj, digits = 2)) %>%
   select(-p.value)
 
-write_csv(auprc.ttest, "output/benchmark/bench_comp_AUPRC.csv")
-
 auprc.ttest %>%
   filter(comp1 == "CollecTRI") %>%
   pull(t.value) %>%
@@ -138,6 +134,11 @@ auprc.ttest %>%
   pull(t.value) %>%
   mean()
 
+# Merge AUROC and AUPRC results into one table
+statistics_bench <- full_join(auroc.ttest, auprc.ttest, by = c("comp1", "comp2"))
+colnames(statistics_bench) <- c("GRN 1", "GRN 2", "AUROC adjusted p value", "AUROC t value", "AUPRC adjusted p value", "AUPRC t value")
+
+write_csv(statistics_bench, "output/benchmark/benchmark_ttest.csv")
 
 
 ## Comparison of source benchmark results---------------------------
