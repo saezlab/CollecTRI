@@ -155,9 +155,18 @@ net_unweighted <- weights_networks$matrixRider_1000bp %>%
   left_join(collecTRI %>% select(edge, weight), by = "edge") %>%
   select(source, target, weight)
 
-net_random10 <- net_unweighted[sample(nrow(net_unweighted), nrow(net_unweighted) - round(nrow(net_unweighted)/100 * 10)), ]
-net_random20 <- net_unweighted[sample(nrow(net_unweighted), nrow(net_unweighted) - round(nrow(net_unweighted)/100 * 20)), ]
-net_random30 <- net_unweighted[sample(nrow(net_unweighted), nrow(net_unweighted) - round(nrow(net_unweighted)/100 * 30)), ]
+
+# remove same amount of random edges
+sample_10 <- sample(nrow(net_unweighted),
+                    nrow(net_unweighted) - round(nrow(net_unweighted)/100 * 10))
+sample_20 <- sample(sample_10,
+                    nrow(net_unweighted) - round(nrow(net_unweighted)/100 * 20))
+sample_30 <- sample(sample_20,
+                    nrow(net_unweighted) - round(nrow(net_unweighted)/100 * 30))
+
+net_random10 <- net_unweighted[sample_10, ]
+net_random20 <- net_unweighted[sample_20, ]
+net_random30 <- net_unweighted[sample_30, ]
 
 write_csv(net_random10, file.path(output.folder, "weighted_networks", "random10.csv"))
 write_csv(net_random20, file.path(output.folder, "weighted_networks", "random20.csv"))
