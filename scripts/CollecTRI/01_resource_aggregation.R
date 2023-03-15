@@ -108,7 +108,8 @@ aggregate_resources <- function(collecTRI.raw){
     data.frame(activation = sum(str_detect(final_TF.TG$Sign, "activation")),
                repression = sum(str_detect(final_TF.TG$Sign, "repression")),
                unknown = sum(final_TF.TG$Sign == "unknown"),
-               PMID = paste(rownames(final_TF.TG), collapse = ","))
+               PMID = paste(rownames(final_TF.TG), collapse = ","),
+               resources = paste(unique(TF.TG.df$Resource), collapse = ","))
   })
   homogenized_table <- homogenized_table %>% add_column(TF.TG = rownames(collecTRI.raw),
                                                         .before = "activation") %>%
