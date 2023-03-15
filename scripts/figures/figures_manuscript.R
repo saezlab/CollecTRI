@@ -11,6 +11,7 @@ library(ggpubr)
 library(MLeval)
 library(caret)
 library(RColorBrewer)
+library(pheatmap)
 
 ## Load data---------------------------
 ### networks
@@ -64,8 +65,10 @@ sign_comp_df <- table(collecTRI$weight) %>%
     Var1 == "-1" ~ "inhibition",
     Var1 == "1" ~ "activation"
   ))
-100/sum(sign_comp_df$Freq) * sign_comp_df$Freq[1]
-100/sum(sign_comp_df$Freq) * sign_comp_df$Freq[2]
+
+# Percentage of activation/repression of all TF-gene links
+100/sum(sign_comp_df$Freq) * sign_comp_df$Freq[1] #repression
+100/sum(sign_comp_df$Freq) * sign_comp_df$Freq[2] #activation
 
 p_1.2.1 <- ggplot(data=sign_comp_df, aes(x=Freq, y=regulation, fill=regulation)) +
   geom_bar(stat="identity", position=position_dodge(width = 0.85), width = 0.7) +
@@ -92,6 +95,7 @@ mor_TFs_df <- collecTRI %>%
   summarize(n = n()) %>%
   arrange(desc(n))
 
+# Percentage of mode of regulation of TFs (activators, repressors, dual)
 100/sum(mor_TFs_df$n) * mor_TFs_df$n[1]
 100/sum(mor_TFs_df$n) * mor_TFs_df$n[2]
 100/sum(mor_TFs_df$n) * mor_TFs_df$n[3]
@@ -302,6 +306,7 @@ p_2.2.1 <- bench_agnositc_res %>%
   ylim(0.35, 0.79) +
   geom_signif(y_position = c(0.77), xmin = c(10), xmax = c(11),
               annotation = c("***"), tip_length = 0.02, size = 0.25, textsize = 2.7,
+              #significance level taken from statistics.R
               margin_top = 0) +
   theme_minimal() +
   theme(legend.position="none",
@@ -318,6 +323,7 @@ p_2.2.2 <- bench_agnositc_res %>%
   ylim(0.4, 0.82) +
   geom_signif(y_position = c(0.81), xmin = c(10), xmax = c(11),
               annotation = c("***"), tip_length = 0.02, size = 0.25, textsize = 2.7 ,
+              #significance level taken from statistics.R
               margin_top = 0) +
   theme_minimal() +
   theme(legend.position="none",
@@ -334,7 +340,6 @@ dev.off()
 pdf("figures/manuscript/p2.2.2.pdf", width = 3.7, height = 2.4)
 p_2.2.2
 dev.off()
-
 
 ## Supp 1 Bias ---------------------------
 ### S1.1 Size difference between TFs in benchmark and background
@@ -359,8 +364,7 @@ TF_df <- rbind(TFs_collecTRI, TFs_doro, TFs_regnet) %>%
   mutate(network = recode(network,
                           dorothea = "DoRothEA ABC",
                           collecTRI = "CollecTRI",
-                          regnet = "RegNetwork",
-                          chea_arch = "ChEA3 ARCHS4"))
+                          regnet = "RegNetwork"))
 
 TF_df$network <- factor(TF_df$network, levels = c("CollecTRI", "DoRothEA ABC", "RegNetwork"))
 
@@ -546,7 +550,6 @@ corr_matrix <- read_csv("output/weighted_networks/correlation_matrix.csv")%>%
   as.data.frame()
 rownames(corr_matrix) <- colnames(corr_matrix)
 corr_matrix <- corr_matrix[rownames(corr_matrix) != "unweighted", colnames(corr_matrix) != "unweighted"]
-lower.tri(corr_matrix, diag = TRUE)
 
 annotation_df <- data.frame(method = map_chr(str_split(colnames(corr_matrix), "_"), 1),
            `promoter length` = map_chr(str_split(colnames(corr_matrix), "_"), 2),
@@ -572,11 +575,12 @@ mat_heat <- pheatmap::pheatmap(corr_matrix, color = color,
                                display_numbers=F, number_color='black', border_color=NA,
                                na_col=NA, cellwidth = 30, cellheight = 30,
                                legend=T, fontsize = 10,
-                               show_rownames = F, show_colnames = T,treeheight_row = 0,
+                               show_rownames = T, show_colnames = F,treeheight_col = 0,
                                silent=T, annotation_col = annotation_df)
-p_S3.1 <- ggplotify::as.ggplot(mat_heat)
+p_S3.1 <- ggplotify::as.ggplot(mat_heat) +
+  theme(plot.margin = unit(c(0,0,0,0), "cm"))
 
-pdf("figures/manuscript/pS3.1.pdf", width = 15, height = 15)
+pdf("figures/manuscript/pS3.1.pdf", width = 10, height = 10)
 p_S3.1
 dev.off()
 
@@ -608,11 +612,11 @@ t.test(bench_weights_res  %>%
 
 t.test(bench_weights_res  %>%
          filter(method == "consensus_estimate") %>%
-         filter(metric == "mcprc") %>%
+         filter(metric == "mcauprc") %>%
          filter(net == "CollecTRI") %>%
          pull(score), bench_weights_res  %>%
          filter(method == "consensus_estimate") %>%
-         filter(metric == "mcprc") %>%
+         filter(metric == "mcauprc") %>%
          filter(net == "weighted CollecTRI") %>%
          pull(score))
 
@@ -642,34 +646,30 @@ p_S3.2.2 <- bench_weights_res %>%
   ylab("AUPRC") +
   xlab("")
 
-
-
-
-pdf("figures/manuscript/pS3.2.1.pdf", width = 2, height = 2)
+pdf("figures/manuscript/pS3.2.1.pdf", width = 2.5, height = 2.5)
 p_S3.2.1
 dev.off()
 
-pdf("figures/manuscript/pS3.2.2.pdf", width = 2, height = 2)
+pdf("figures/manuscript/pS3.2.2.pdf", width = 2.5, height = 2.5)
 p_S3.2.2
 dev.off()
-
-
 
 ## Use weights as filtering
 bench_filtered_res <- read_csv("output/benchmark/benchmark_weights_filtered_res.csv")
 bench_filtered_res <- bench_filtered_res %>%
+  filter(str_detect(net, "matRid1_") | str_detect(net, "matRid1r") | str_detect(net, "collecTRI")) %>%
   mutate(quantile = case_when(
-    str_detect(net, "raw") ~ "full",
-    net == "collecTRI" ~ "full",
+    str_detect(net, "raw") ~ "0%",
+    net == "collecTRI" ~ "0%",
     str_detect(net, "_10") ~ "10%",
     str_detect(net, "_20") ~ "20%",
     str_detect(net, "_30") ~ "30%",
   )) %>%
   mutate(weightingMethod = case_when(
-    str_detect(net, "collecTRI") ~ "none",
-    str_detect(net, "FIMO") ~ "FIMO",
-    str_detect(net, "matRid") ~ "matrixRider"
+    str_detect(net, "collecTRI") ~ "random",
+    str_detect(net, "matRid") ~ "weights"
   ))
+
 
 order_net <- bench_filtered_res %>%
   filter(method == "consensus_estimate") %>%
@@ -678,16 +678,9 @@ order_net <- bench_filtered_res %>%
   summarize(mean = median(score)) %>%
   arrange(desc(mean))
 bench_filtered_res$net <- factor(bench_filtered_res$net, levels = rev(order_net$net))
-bench_filtered_res$quantile <- factor(bench_filtered_res$quantile, levels = c("full", "10%", "20%", "30%"))
+bench_filtered_res$quantile <- factor(bench_filtered_res$quantile, levels = c("0%", "10%", "20%", "30%"))
 
-bench_filtered_res_1kb <- bench_filtered_res %>%
-  filter(str_detect(net, "matRid1_") | str_detect(net, "FIMO1_") | str_detect(net, "matRid1r") | str_detect(net, "FIMO1r") | str_detect(net, "collecTRI"))
-
-bench_filtered_res_10kb <- bench_filtered_res %>%
-  filter(str_detect(net, "matRid10") | str_detect(net, "FIMO10") | str_detect(net, "collecTRI"))
-
-
-p_S1.3.1 <- bench_filtered_res_1kb %>%
+p_S3.3.1 <- bench_filtered_res %>%
   filter(method == "consensus_estimate") %>%
   filter(metric == "mcauroc") %>%
   ggplot(aes(x=weightingMethod, y=score, fill=quantile)) +
@@ -696,10 +689,11 @@ p_S1.3.1 <- bench_filtered_res_1kb %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
         text = element_text(size = 9),
         legend.key.size = unit(0.3, "cm")) +
+  guides(fill=guide_legend(title="Quantile of\nremoved edges")) +
   ylab("AUROC") +
-  xlab("Weighting method")
+  xlab("Basis for the removal of edges from CollecTRI")
 
-p_S1.3.2 <- bench_filtered_res_10kb %>%
+p_S3.3.2 <- bench_filtered_res %>%
   filter(method == "consensus_estimate") %>%
   filter(metric == "mcauprc") %>%
   ggplot(aes(x=weightingMethod, y=score, fill=quantile)) +
@@ -708,54 +702,19 @@ p_S1.3.2 <- bench_filtered_res_10kb %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
         text = element_text(size = 9),
         legend.key.size = unit(0.3, "cm")) +
+  guides(fill=guide_legend(title="Quantile of\nremoved edges")) +
   ylab("AUPRC") +
-  xlab("Weighting method")
+  xlab("Basis for the removal of edges from CollecTRI")
 
 
-p_S1.4.1 <- bench_filtered_res_10kb %>%
-  filter(method == "consensus_estimate") %>%
-  filter(metric == "mcauroc") %>%
-  ggplot(aes(x=weightingMethod, y=score, fill=quantile)) +
-  geom_boxplot(outlier.size=0.2, lwd=0.2) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        text = element_text(size = 9),
-        legend.key.size = unit(0.3, "cm")) +
-  ylab("AUROC") +
-  xlab("Weighting method")
-
-p_S1.4.2 <- bench_filtered_res_10kb %>%
-  filter(method == "consensus_estimate") %>%
-  filter(metric == "mcauprc") %>%
-  ggplot(aes(x=weightingMethod, y=score, fill=quantile)) +
-  geom_boxplot(outlier.size=0.2, lwd=0.2) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        text = element_text(size = 9),
-        legend.key.size = unit(0.3, "cm")) +
-  ylab("AUPRC") +
-  xlab("Weighting method")
-
-
-pdf("figures/manuscript/pS1.3.1.pdf", width = 3.6, height = 2)
-p_S1.3.1
+pdf("figures/manuscript/pS3.3.1.pdf", width = 4, height = 2)
+p_S3.3.1
 dev.off()
 
-pdf("figures/manuscript/pS1.3.2.pdf", width = 3.6, height = 2)
-p_S1.3.2
+pdf("figures/manuscript/pS3.3.2.pdf", width = 4, height = 2)
+p_S3.3.2
 dev.off()
 
-pdf("figures/manuscript/pS1.4.1.pdf", width = 3.6, height = 2)
-p_S1.4.1
-dev.off()
-
-pdf("figures/manuscript/pS1.4.2.pdf", width = 3.6, height = 2)
-p_S1.4.2
-dev.off()
-
-
-
-## Supp Sign decision ---------------------------
 
 
 ## Methods TFs covered in benchmark ---------------------------

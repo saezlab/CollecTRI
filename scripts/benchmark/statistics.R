@@ -1,6 +1,8 @@
 # Copyright (c) Sophia Müller-Dott [2023]
 # sophia.mueller-dott@uni-heidelberg.de
 
+# In this script we perform the statistical analysis of our results
+
 library(tidyverse)
 
 ## Comparison of benchmark results---------------------------
@@ -32,6 +34,8 @@ auroc_mat <- bench_agnositc_res %>%
   pivot_wider(names_from = net, values_from = score) %>%
   column_to_rownames("counter")
 
+auroc_mat$CollecTRI %>% median()
+
 auprc_mat <- bench_agnositc_res %>%
   filter(metric == "mcauprc") %>%
   filter(method == "consensus_estimate") %>%
@@ -39,6 +43,8 @@ auprc_mat <- bench_agnositc_res %>%
   select(score, net, counter) %>%
   pivot_wider(names_from = net, values_from = score) %>%
   column_to_rownames("counter")
+
+auprc_mat$CollecTRI %>% median()
 
 ### Perform t-test
 perform.multi.ttest <- function(mat){
@@ -220,6 +226,8 @@ full.source.auroc.ttest %>%
   pull(t.value) %>%
   mean
 
+mean(source_auroc_mat$CollecTRI[rownames(source_auroc_mat) %in% c("TP53", "FLI1", "NR2F2", "SOX2", "REST")])
+
 full.source.auprc.ttest <- perform.multi.ttest(full_source_auprc_mat)%>%
   mutate(t.value = round(t.value, digits = 1)) %>%
   mutate(p.adj = round(p.adj, digits = 2)) %>%
@@ -237,13 +245,13 @@ full.source.auprc.ttest %>%
   pull(t.value) %>%
   mean
 
+mean(source_auprc_mat$CollecTRI[rownames(source_auroc_mat) %in% c("TP53", "FLI1", "NR2F2", "SOX2", "REST")])
+
+
 
 ## Weights ---------------------------
 benchmark_weights <- read_csv("output/040722/benchmark/weights_res.csv")
 
-
-
-## Weights ---------------------------
 auroc_mat_weights <- benchmark_weights %>%
   filter(metric == "mcauroc") %>%
   filter(method == "consensus_estimate") %>%
@@ -308,3 +316,8 @@ auroc.ttest_coverage
 
 
 
+
+## Size effect ----
+# The effect of the number of targets and the estimated activities was investigated
+# directly in the figures_manuscript.R script. For more details please check
+# out the Section Supp 1 Bias, S1.1 Size difference between TFs in benchmark and background
