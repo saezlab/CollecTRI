@@ -4,19 +4,49 @@
 <!-- badges: end -->
 
 ## Overview
-CollecTRI is a gene regulatory network (GRN) containing signed transcription factor
-(TF) - target gene interactions. TF-gene interactions were manually curated and 
-collected from ExTRI, HTRI, TRRUST, TFActS, IntAct, SIGNOR, CytReg, GEREDB and 
-Pavlidis. CollecTRI was benchmarked using the knockTF datasets and showed a
-superior performance compared to other known GRNs.
+The CollecTRI GRN contains signed transcription factor (TF) - target gene 
+interactions compiled from 12 different resources. It provides 
+an increased coverage of transcription factors and was benchmarked against 
+other known GRNs showing a superior performance in identifying perturbed TFs 
+based on gene expression data using the knockTF data sets.
+
+
+Graphical abstract
+
+
+## Resources included in CollecTRI
+- ExTRI
+- HTRI
+- TRRUST
+- TFActS
+- IntAct
+- SIGNOR
+- CytReg
+- GEREDB
+- Pavlidis
+- DoRothEA A
+- NTNU curations
 
 
 ## Data availability 
-
 CollecTRI is available through 
 [OmniPath] or the 
 [DoRothEA](http://bioconductor.org/packages/release/data/experiment/html/dorothea.html) 
 bioconductor package.
+
+
+## Scripts
+For more information about CollecTRI, please check out the following scripts:
+
+- [Construction of CollecTRI](https://github.com/saezlab/CollecTRI/tree/main/scripts/CollecTRI)
+- [Benchmark](https://github.com/saezlab/CollecTRI/tree/main/scripts/benchmark)
+  - [Systematic comparison](https://github.com/saezlab/CollecTRI/blob/main/scripts/benchmark/benchmark.ipynb)
+  - [Evaluation of binding weights](https://github.com/saezlab/CollecTRI/blob/main/scripts/benchmark/benchmark_weights.ipynb)
+  - [Statistical evaluation](https://github.com/saezlab/CollecTRI/blob/main/scripts/benchmark/statistics.R)
+- [Case study]()
+- [Manuscript figures](https://github.com/saezlab/CollecTRI/blob/main/scripts/figures/figures_manuscript.R)
+
+
 
 ## License
 
