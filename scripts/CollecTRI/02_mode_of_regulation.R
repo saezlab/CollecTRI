@@ -24,7 +24,8 @@ assign_sign <- function(aggregated.resources,
                         tf.classification = NULL, #needs to be provided if use.keywords is set to TRUE
                         use.classification = T,
                         use.TFregulon = T,
-                        unknown.to.pos = T){
+                        unknown.to.pos = T,
+                        save.decision = F){
 
   # select sign based on more number of PMIDs
   network.signed <- aggregated.resources %>%
@@ -92,11 +93,23 @@ assign_sign <- function(aggregated.resources,
 
   network.signed <- network.signed %>%
     filter(sign != 0)
-  network.signed <- network.signed %>%
-    dplyr::mutate(source = map_chr(str_split(TF.TG, ":"), 1)) %>%
-    dplyr::mutate(target = map_chr(str_split(TF.TG, ":"), 2)) %>%
-    dplyr::rename("weight" = sign) %>%
-    dplyr::select(c(source, target, weight, PMID, TF.category)) #decision
+
+  if (save.decision){
+    network.signed <- network.signed %>%
+      dplyr::mutate(source = map_chr(str_split(TF.TG, ":"), 1)) %>%
+      dplyr::mutate(target = map_chr(str_split(TF.TG, ":"), 2)) %>%
+      dplyr::rename("weight" = sign) %>%
+      dplyr::select(c(source, target, weight, TF.category, resources, PMID, decision))
+  }
+
+  if (!save.decision){
+    network.signed <- network.signed %>%
+      dplyr::mutate(source = map_chr(str_split(TF.TG, ":"), 1)) %>%
+      dplyr::mutate(target = map_chr(str_split(TF.TG, ":"), 2)) %>%
+      dplyr::rename("weight" = sign) %>%
+      dplyr::select(c(source, target, weight, TF.category, resources, PMID)) #decision
+  }
+
 
   return(network.signed)
 }
@@ -105,7 +118,11 @@ assign_sign <- function(aggregated.resources,
 ## Construct  networks ---------------------------
 signed.collecTRI <- assign_sign(aggregated.resources = collecTRI.resources,
                               tf.classification = tf.class)
+signed.collecTRI.decision <- assign_sign(aggregated.resources = collecTRI.resources,
+                                         tf.classification = tf.class,
+                                         save.decision = T)
 
 ## save networks ---------------------------
 dir.create(file.path(output.folder, "CollecTRI"), showWarnings = FALSE)
 readr::write_csv(signed.collecTRI, file.path(output.folder, "CollecTRI", "CollecTRI.csv"))
+readr::write_csv(signed.collecTRI.decision, file.path(output.folder, "CollecTRI", "CollecTRI_signDecis.csv"))
