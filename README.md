@@ -43,7 +43,7 @@ For more information about CollecTRI, please check out the following scripts:
   - [Systematic comparison](https://github.com/saezlab/CollecTRI/blob/main/scripts/benchmark/benchmark.ipynb)
   - [Evaluation of binding weights](https://github.com/saezlab/CollecTRI/blob/main/scripts/benchmark/benchmark_weights.ipynb)
   - [Statistical evaluation](https://github.com/saezlab/CollecTRI/blob/main/scripts/benchmark/statistics.R)
-- [Case study]()
+- [Case study](https://github.com/saezlab/CollecTRI/blob/main/scripts/Case_study/case_study.R)
 - [Manuscript figures](https://github.com/saezlab/CollecTRI/blob/main/scripts/figures/figures_manuscript.R)
 
 
