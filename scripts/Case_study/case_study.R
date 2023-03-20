@@ -3,7 +3,6 @@ library(tidyverse)
 library(decoupleR)
 library(magrittr)
 
-setwd("Documents/Git/CollecTRI/")
 ## Load files
 dorothea_ABC <- read.csv("data/Networks/dorothea_ABC.csv")
 CollecTRI <- read.csv("data/Networks/CollecTRI.csv")
