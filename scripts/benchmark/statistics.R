@@ -143,6 +143,9 @@ auprc.ttest %>%
 # Merge AUROC and AUPRC results into one table
 statistics_bench <- full_join(auroc.ttest, auprc.ttest, by = c("comp1", "comp2"))
 colnames(statistics_bench) <- c("GRN 1", "GRN 2", "AUROC adjusted p value", "AUROC t value", "AUPRC adjusted p value", "AUPRC t value")
+#as Wolfgang Huber recommended we report that the values are below detection limit (https://www.sciencedirect.com/science/article/pii/S2405471219300717?via%3Dihub)
+statistics_bench$`AUROC adjusted p value`[statistics_bench$`AUROC adjusted p value` == 0] <- "<2.2x10^-16"
+statistics_bench$`AUPRC adjusted p value`[statistics_bench$`AUPRC adjusted p value` == 0] <- "<2.2x10^-16"
 
 write_csv(statistics_bench, "output/benchmark/benchmark_ttest.csv")
 
@@ -315,6 +318,32 @@ auroc.ttest_coverage <- auroc.ttest.p_coverage %>%
 auroc.ttest_coverage
 
 
+
+
+## Sign ---------------------------
+benchmark_sign <- read_csv("output/benchmark/benchmark_sign_res.csv")
+
+auroc_mat_sign <- benchmark_sign %>%
+  filter(metric == "mcauroc") %>%
+  filter(method == "consensus_estimate") %>%
+  add_column(counter = rep(c(1:1000), times = length(unique(benchmark_sign$net)))) %>%
+  select(score, net, counter) %>%
+  pivot_wider(names_from = net, values_from = score) %>%
+  column_to_rownames("counter")
+auprc_mat_sign <- benchmark_sign %>%
+  filter(metric == "mcauprc") %>%
+  filter(method == "consensus_estimate") %>%
+  add_column(counter = rep(c(1:1000), times = length(unique(benchmark_sign$net)))) %>%
+  select(score, net, counter) %>%
+  pivot_wider(names_from = net, values_from = score) %>%
+  column_to_rownames("counter")
+
+auroc_t <- t.test(auroc_mat_sign$collecTRI, auroc_mat_sign$collecTRI_agnostic)
+auprc_t <- t.test(auprc_mat_sign$collecTRI, auprc_mat_sign$collecTRI_agnostic)
+
+p.adjust(c(auroc_t$p.value, auprc_t$p.value), method = "BH")
+auroc_t$statistic
+auprc_t$statistic
 
 
 ## Size effect ----
