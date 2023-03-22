@@ -126,6 +126,7 @@ TFs <- map(networks, function(x){table(x$source) %>% as.data.frame() %>% mutate(
 TF_df <- TFs %>% reduce(full_join, by = "Var1")
 TF_df[is.na(TF_df)] <- 0
 colnames(TF_df) <- c("source", names(networks))
+100/nrow(TF_df) * sum(rowSums(TF_df %>% column_to_rownames("source")) > 1)
 
 interactions <- map(networks, function(x){table(paste0(x$source, "_", x$target)) %>% as.data.frame()  %>% mutate(Freq = 1)})
 
@@ -180,6 +181,15 @@ plot_df_1 %>% group_by(network) %>%
   mutate(perc = 100/total * individual_counts) %>%
   filter(labels == "unique")
 
+plot_df_1 %>% group_by(network) %>%
+  reframe(total = sum(count),
+          individual_counts = count,
+          labels = unique) %>%
+  mutate(perc = 100/total * individual_counts) %>%
+  filter(labels == "unique") %>%
+  pull(perc) %>%
+  mean()
+
 tmp <- TF_df %>% column_to_rownames("source") %>%
   add_column(total =  rowSums(TF_df %>% column_to_rownames("source"))) %>%
   mutate(unique = case_when(
@@ -233,6 +243,11 @@ net_order <- plot_df_final %>%
 plot_df_final$network <- factor(plot_df_final$network, levels = net_order)
 plot_df_final$unique <- factor(plot_df_final$unique, levels = unique(plot_df_final$unique))
 plot_df_final$type <- factor(plot_df_final$type, levels = unique(plot_df_final$type))
+
+plot_df_final %>%
+  group_by(network, type) %>%
+  summarise(total = sum(count)) %>%
+  arrange(desc(total))
 
 
 p_1.3 <- ggplot(plot_df_final, aes(fill=unique, y=count, x=network)) +
@@ -341,8 +356,208 @@ pdf("figures/manuscript/p2.2.2.pdf", width = 3.7, height = 2.4)
 p_2.2.2
 dev.off()
 
-## Supp 1 Bias ---------------------------
+## Supp 1 Sign ---------------------------
 ### S1.1 Size difference between TFs in benchmark and background
+sign_collecTRI <- read.csv("output/CollecTRI/CollecTRI_signDecis.csv")
+
+decision_df <- sign_collecTRI %>%
+  group_by(decision, weight) %>%
+  summarise(total = n()) %>%
+  mutate(weight = recode(weight,
+                         "1" = "activation",
+                         "-1" = "repression")) %>%
+  mutate(decision = recode(decision,
+                           "keywords" = "TF role",
+                           "regulon" = "Regulon",
+                           "unknown" = "Default activation")) %>%
+  arrange(desc(total))
+decision_df <- rbind(decision_df, data.frame(decision = "Default activation", weight = "repression", total = 0))
+decision_df$decision <- factor(decision_df$decision, levels = unique(decision_df$decision))
+
+p_S1.1 <- ggplot(data=decision_df, aes(x=decision, y=total, fill=weight)) +
+  geom_bar(stat="identity", position=position_dodge(width = 0.85), width = 0.8) +
+  theme_minimal() +
+  scale_fill_manual(values=c('#91B57D','#A55A5B')) +
+  xlab("Decision source") +
+  ylab("Number of interactions") +
+  theme(text = element_text(size = 9),
+        legend.key.size = unit(0.3, "cm"),
+        legend.position = "bottom") +
+  guides(fill=guide_legend(title=""))
+
+decision_df %>%
+  group_by(decision) %>%
+  summarise(all = sum(total))
+
+pdf("figures/manuscript/pS1.1.pdf", width = 4, height = 3.7)
+p_S1.1
+dev.off()
+
+bench_sign_collecTRI <- read.csv("output/benchmark/benchmark_sign_res.csv")
+bench_sign_collecTRI <- bench_sign_collecTRI %>%
+  mutate(net = recode(net,
+                      collecTRI = "CollecTRI signed",
+                      collecTRI_agnostic = "CollecTRI unsigned"))
+order_net <- bench_sign_collecTRI %>%
+  filter(method == "consensus_estimate") %>%
+  filter(metric == "mcauroc") %>%
+  group_by(net) %>%
+  summarize(mean = median(score)) %>%
+  arrange(desc(mean))
+bench_sign_collecTRI$net <- factor(bench_sign_collecTRI$net, levels = rev(order_net$net))
+
+p_S1.2.1 <- bench_sign_collecTRI %>%
+  filter(method == "consensus_estimate") %>%
+  filter(metric == "mcauroc") %>%
+  ggplot(aes(x=net, y=score, fill=net)) +
+  geom_boxplot(outlier.size=0.2, lwd=0.2) +
+  geom_signif(y_position = c(0.75), xmin = c(1), xmax = c(2),
+              annotation = c("***"), tip_length = 0.02, size = 0.25, textsize = 2.7,
+              #significance level taken from statistics.R
+              margin_top = 0) +
+  theme_minimal() +
+  ylim(0.62, 0.76) +
+  theme(legend.position="none",
+        text = element_text(size = 9),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ylab("AUROC") +
+  xlab("")
+
+p_S1.2.2 <- bench_sign_collecTRI %>%
+  filter(method == "consensus_estimate") %>%
+  filter(metric == "mcauprc") %>%
+  ggplot(aes(x=net, y=score, fill=net)) +
+  geom_boxplot(outlier.size=0.2, lwd=0.2) +
+  geom_signif(y_position = c(0.8), xmin = c(1), xmax = c(2),
+              annotation = c("***"), tip_length = 0.02, size = 0.25, textsize = 2.7,
+              #significance level taken from statistics.R
+              margin_top = 0) +
+  theme_minimal() +
+  ylim(0.66, 0.81) +
+  theme(legend.position="none",
+        text = element_text(size = 9),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ylab("AUPRC") +
+  xlab("")
+
+
+pdf("figures/manuscript/pS1.2.1.pdf", width = 2, height = 2.5)
+p_S1.2.1
+dev.off()
+
+pdf("figures/manuscript/pS1.2.2.pdf", width = 2, height = 2.5)
+p_S1.2.2
+dev.off()
+
+
+
+
+### S1.2 Correlation per exp
+# correlation per experiment
+cor_perExp <- map_dfr(names(act), function(act_i){
+  act_df <- act[[act_i]] %>%
+    pivot_longer(!...1,
+                 names_to = "source",
+                 values_to = "act"
+    )
+
+  if(str_detect(string = act_i, pattern = "collecTRI")){
+    act_df <- act_df %>% left_join(TF_df %>% filter(network == "CollecTRI"), by = "source")
+  } else if (str_detect(string = act_i, pattern = "dorothea")){
+    act_df <- act_df %>% left_join(TF_df %>% filter(network == "DoRothEA ABC"), by = "source")
+  } else if (str_detect(string = act_i, pattern = "regnet")){
+    act_df <- act_df %>% left_join(TF_df %>% filter(network == "RegNetwork"), by = "source")
+  }
+
+  act_df <- act_df %>%
+    filter(!is.na(act))
+  map_dfr(unique(act_df$...1), function(exp){
+    df_exp <- act_df %>% filter(...1 == exp)
+    data.frame(experiment = exp,
+               pearson.cor = cor(abs(df_exp$act), df_exp$nTargets, method = "pearson"),
+               network = act_i)
+  })
+})
+
+cor_perExp <- cor_perExp %>%
+  mutate(network = recode(network,
+                          collecTRI = "CollecTRI",
+                          dorothea = "DoRothEA ABC",
+                          regnet = "RegNetwork")) %>%
+  filter(network %in% c("CollecTRI", "DoRothEA ABC", "RegNetwork"))
+# %>% filter(network != "collecTRI_rand")
+labels_plot <- cor_perExp %>%
+  group_by(network) %>%
+  summarise(mean_cor = round(mean(pearson.cor), digits = 2)) %>%
+  pull(mean_cor) %>%
+  paste0("mean(r) = ", .)
+names(labels_plot) <- unique(cor_perExp %>% pull(network))
+
+p_S1.2 <- ggplot(cor_perExp ,
+                 aes(x = pearson.cor, fill = network) ) +
+  geom_histogram(bins = 50) +
+  theme_minimal() +
+  theme(text = element_text(size = 9),
+        legend.key.size = unit(0.4, "cm"),
+        legend.position = "right") +
+  xlab("pearson correlation (r)") +
+  ylab("Number of experiments") +
+  facet_grid(. ~ network, labeller = as_labeller(labels_plot))
+
+
+pdf("figures/manuscript/pS1.2.pdf", width = 6, height = 2.7)
+p_S1.2
+dev.off()
+
+## Supp 2 TF with at least five targets ---------------------------
+nTF_df <- map_dfr(names(networks), function(net_i){
+  net <- networks[[net_i]]
+
+  data.frame(net = net_i,
+             nTFs = c(table(net$source) %>% length(), sum(table(net$source) >= 5)),
+             TF = c("all", "at least 5 targets"))
+})
+
+nTF_df <- nTF_df %>%
+  mutate(net = recode(net,
+                      chea_archs4 = "ChEA3 ARCHS4",
+                      chea_GTEx = "ChEA3 GTEx",
+                      chea_enrich = "ChEA3 Enrichr",
+                      regnet = "RegNetwork",
+                      doro = "DoRothEA ABC",
+                      collecTRI = "CollecTRI",
+                      chea_remap = "ChEA3 ReMap",
+                      chea_lit = "ChEA3 Literature",
+                      chea_encode = "ChEA3 ENCODE",
+                      rand = "shuffled CollecTRI",
+                      pathComp = "Pathway Commmons"))
+
+order_net <- nTF_df %>%
+  filter(TF == "all") %>%
+  arrange(desc(nTFs)) %>%
+  pull(net)
+
+nTF_df$net <- factor(nTF_df$net, levels=order_net)
+nTF_df$TF <- factor(nTF_df$TF, levels=c("all", "at least 5 targets"))
+
+
+p_S2 <- ggplot(data=nTF_df, aes(x=net, y=nTFs, fill=TF)) +
+  geom_bar(stat="identity", position=position_dodge())+
+  scale_fill_brewer(palette="Paired")+
+  theme_minimal() +
+  xlab("") +
+  ylab("Number of TFs") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        text = element_text(size = 9),
+        legend.key.size = unit(0.3, "cm")) +
+  guides(fill=guide_legend(title=""))
+
+pdf("figures/manuscript/pS2.pdf", width = 6, height = 3.4)
+p_S2
+dev.off()
+
+## Supp 2 Bias ---------------------------
+### S2.1 Size difference between TFs in benchmark and background
 TFs_bench <- obs_filtered$TF %>% unique()
 
 TFs_collecTRI <- table(collecTRI$source) %>% as.data.frame() %>%
@@ -451,7 +666,7 @@ pdf("figures/manuscript/pS1.2.pdf", width = 6, height = 2.7)
 p_S1.2
 dev.off()
 
-## Supp 2 Benchmark per source ---------------------------
+## Supp 3 Benchmark per source ---------------------------
 bench_signed_source_res <- read_csv("output/benchmark/benchmark_source_res.csv")
 bench_signed_source_res <- bench_signed_source_res %>%
   mutate(net = recode(net,
@@ -544,7 +759,7 @@ p_S2.2.2
 dev.off()
 
 
-## Supp 3 weights ---------------------------
+## Supp 4 weights ---------------------------
 ### S3.1 Correlation between weighting strategy
 corr_matrix <- read_csv("output/weighted_networks/correlation_matrix.csv")%>%
   as.data.frame()
