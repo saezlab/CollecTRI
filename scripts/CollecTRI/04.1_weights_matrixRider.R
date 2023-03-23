@@ -7,6 +7,8 @@
 library(MatrixRider)
 library(TFBSTools)
 library(Biostrings)
+#library(GenomicFeatures)
+#library(TxDb.Hsapiens.UCSC.hg38.knownGene)
 library(tidyverse)
 library('org.Hs.eg.db')
 source("scripts/helper/weights_functions.R")
