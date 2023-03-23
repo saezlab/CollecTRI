@@ -32,7 +32,7 @@ chea_lit <- chea %>%
 chea_remap <- chea %>%
   filter(confidence == "ReMap_ChIP-seq")
 
-collecTRI <- read_csv("output/CollecTRI/CollecTRI.csv")
+collecTRI <- read_csv("output/CollecTRI/CollecTRI_GRN.csv")
 
 networks <- list(doro = doro,
                  regnet = regnet,
@@ -357,8 +357,9 @@ p_2.2.2
 dev.off()
 
 ## Supp 1 Sign ---------------------------
-### S1.1 Size difference between TFs in benchmark and background
-sign_collecTRI <- read.csv("output/CollecTRI/CollecTRI_signDecis.csv")
+# Add information about sign decision
+sign_collecTRI_dec <- read.csv("output/CollecTRI/CollecTRI_signDecis.csv")
+sign_collecTRI <- left_join(collecTRI, sign_collecTRI_dec %>% dplyr::select(source, target, decision), by = c("source", "target"))
 
 decision_df <- sign_collecTRI %>%
   group_by(decision, weight) %>%
@@ -449,66 +450,6 @@ pdf("figures/manuscript/pS1.2.2.pdf", width = 2, height = 2.5)
 p_S1.2.2
 dev.off()
 
-
-
-
-### S1.2 Correlation per exp
-# correlation per experiment
-cor_perExp <- map_dfr(names(act), function(act_i){
-  act_df <- act[[act_i]] %>%
-    pivot_longer(!...1,
-                 names_to = "source",
-                 values_to = "act"
-    )
-
-  if(str_detect(string = act_i, pattern = "collecTRI")){
-    act_df <- act_df %>% left_join(TF_df %>% filter(network == "CollecTRI"), by = "source")
-  } else if (str_detect(string = act_i, pattern = "dorothea")){
-    act_df <- act_df %>% left_join(TF_df %>% filter(network == "DoRothEA ABC"), by = "source")
-  } else if (str_detect(string = act_i, pattern = "regnet")){
-    act_df <- act_df %>% left_join(TF_df %>% filter(network == "RegNetwork"), by = "source")
-  }
-
-  act_df <- act_df %>%
-    filter(!is.na(act))
-  map_dfr(unique(act_df$...1), function(exp){
-    df_exp <- act_df %>% filter(...1 == exp)
-    data.frame(experiment = exp,
-               pearson.cor = cor(abs(df_exp$act), df_exp$nTargets, method = "pearson"),
-               network = act_i)
-  })
-})
-
-cor_perExp <- cor_perExp %>%
-  mutate(network = recode(network,
-                          collecTRI = "CollecTRI",
-                          dorothea = "DoRothEA ABC",
-                          regnet = "RegNetwork")) %>%
-  filter(network %in% c("CollecTRI", "DoRothEA ABC", "RegNetwork"))
-# %>% filter(network != "collecTRI_rand")
-labels_plot <- cor_perExp %>%
-  group_by(network) %>%
-  summarise(mean_cor = round(mean(pearson.cor), digits = 2)) %>%
-  pull(mean_cor) %>%
-  paste0("mean(r) = ", .)
-names(labels_plot) <- unique(cor_perExp %>% pull(network))
-
-p_S1.2 <- ggplot(cor_perExp ,
-                 aes(x = pearson.cor, fill = network) ) +
-  geom_histogram(bins = 50) +
-  theme_minimal() +
-  theme(text = element_text(size = 9),
-        legend.key.size = unit(0.4, "cm"),
-        legend.position = "right") +
-  xlab("pearson correlation (r)") +
-  ylab("Number of experiments") +
-  facet_grid(. ~ network, labeller = as_labeller(labels_plot))
-
-
-pdf("figures/manuscript/pS1.2.pdf", width = 6, height = 2.7)
-p_S1.2
-dev.off()
-
 ## Supp 2 TF with at least five targets ---------------------------
 nTF_df <- map_dfr(names(networks), function(net_i){
   net <- networks[[net_i]]
@@ -556,8 +497,8 @@ pdf("figures/manuscript/pS2.pdf", width = 6, height = 3.4)
 p_S2
 dev.off()
 
-## Supp 2 Bias ---------------------------
-### S2.1 Size difference between TFs in benchmark and background
+## Supp 3 Bias ---------------------------
+### S3.1 Size difference between TFs in benchmark and background
 TFs_bench <- obs_filtered$TF %>% unique()
 
 TFs_collecTRI <- table(collecTRI$source) %>% as.data.frame() %>%
@@ -595,7 +536,7 @@ stat.test <- TF_df %>%
     p.adj < 0.05 & p.adj >= 0.01 ~ "*",
   ))
 
-p_S1.1 <- ggboxplot(TF_df, x = "network", y = "nTargets", fill = "benchmark", outlier.size=0.2, lwd=0.2) +
+p_S3.1 <- ggboxplot(TF_df, x = "network", y = "nTargets", fill = "benchmark", outlier.size=0.2, lwd=0.2) +
   theme_minimal() +
   stat_pvalue_manual(stat.test,  label = "p.adj.signif",
                      tip.length = 0.01, bracket.nudge.y = -2) +
@@ -605,11 +546,11 @@ p_S1.1 <- ggboxplot(TF_df, x = "network", y = "nTargets", fill = "benchmark", ou
   ylab("Number of targets")
 
 
-pdf("figures/manuscript/pS1.1.pdf", width = 6, height = 2.8)
-p_S1.1
+pdf("figures/manuscript/pS3.1.pdf", width = 6, height = 2.8)
+p_S3.1
 dev.off()
 
-### S1.2 Correlation per exp
+### S3.2 Correlation per exp
 # correlation per experiment
 cor_perExp <- map_dfr(names(act), function(act_i){
   act_df <- act[[act_i]] %>%
@@ -650,7 +591,7 @@ labels_plot <- cor_perExp %>%
   paste0("mean(r) = ", .)
 names(labels_plot) <- unique(cor_perExp %>% pull(network))
 
-p_S1.2 <- ggplot(cor_perExp ,
+p_S3.2 <- ggplot(cor_perExp ,
                  aes(x = pearson.cor, fill = network) ) +
   geom_histogram(bins = 50) +
   theme_minimal() +
@@ -662,11 +603,11 @@ p_S1.2 <- ggplot(cor_perExp ,
   facet_grid(. ~ network, labeller = as_labeller(labels_plot))
 
 
-pdf("figures/manuscript/pS1.2.pdf", width = 6, height = 2.7)
-p_S1.2
+pdf("figures/manuscript/pS3.2.pdf", width = 6, height = 2.7)
+p_S3.2
 dev.off()
 
-## Supp 3 Benchmark per source ---------------------------
+## Supp 4 Benchmark per source ---------------------------
 bench_signed_source_res <- read_csv("output/benchmark/benchmark_source_res.csv")
 bench_signed_source_res <- bench_signed_source_res %>%
   mutate(net = recode(net,
@@ -689,9 +630,10 @@ signed_source_summarized <- bench_signed_source_res %>%
   pivot_wider(names_from = metric, values_from = median) %>%
   rename("Network" = "net")
 
-signed_source_summarized$Network <- factor(signed_source_summarized$Network, levels = rev(order_net$net))
 
-p_S2.1 <- ggplot(signed_source_summarized, aes(color=Network, y=mcauprc, x=mcauroc)) +
+signed_source_summarized$Network <- factor(signed_source_summarized$Network, levels = unique(signed_source_summarized$Network))
+
+p_S4.1 <- ggplot(signed_source_summarized, aes(color=Network, y=mcauprc, x=mcauroc)) +
   geom_point(position=position_jitter(h=0.02,w=0.02), size = 1) +
   geom_vline(xintercept=0.5, linetype="dashed", color = "black", alpha = 0.4) +
   geom_hline(yintercept=0.5, linetype="dashed", color = "black", alpha = 0.4) +
@@ -719,7 +661,7 @@ top_performing_method <- data.frame(network = signed_source_summarized$Network,
                                     score = c(signed_source_summarized$mcauroc, signed_source_summarized$mcauprc),
                                     metric = rep(c("mcauroc", "mcauprc"), each = nrow(signed_source_summarized)))
 
-p_S2.2.1 <- top_performing_method %>%
+p_S4.2.1 <- top_performing_method %>%
   filter(metric == "mcauroc") %>%
   ggplot(aes(x=network, y=score, fill=network)) +
   geom_boxplot(outlier.size=0.2, lwd=0.2) +
@@ -732,7 +674,7 @@ p_S2.2.1 <- top_performing_method %>%
   ylab("median AUROC") +
   xlab("")
 
-p_S2.2.2 <- top_performing_method %>%
+p_S4.2.2 <- top_performing_method %>%
   filter(metric == "mcauprc") %>%
   ggplot(aes(x=network, y=score, fill=network)) +
   geom_boxplot(outlier.size=0.2, lwd=0.2) +
@@ -746,21 +688,21 @@ p_S2.2.2 <- top_performing_method %>%
   xlab("")
 
 
-pdf("figures/manuscript/pS2.1.pdf", width = 4.4, height = 4.2)
-p_S2.1
+pdf("figures/manuscript/pS4.1.pdf", width = 4.4, height = 4.2)
+p_S4.1
 dev.off()
 
-pdf("figures/manuscript/pS2.2.1.pdf", width = 1.5, height = 2.5)
-p_S2.2.1
+pdf("figures/manuscript/pS4.2.1.pdf", width = 1.5, height = 2.5)
+p_S4.2.1
 dev.off()
 
-pdf("figures/manuscript/pS2.2.2.pdf", width = 1.5, height = 2.5)
-p_S2.2.2
+pdf("figures/manuscript/pS4.2.2.pdf", width = 1.5, height = 2.5)
+p_S4.2.2
 dev.off()
 
 
-## Supp 4 weights ---------------------------
-### S3.1 Correlation between weighting strategy
+## Supp 5 weights ---------------------------
+### S5.1 Correlation between weighting strategy
 corr_matrix <- read_csv("output/weighted_networks/correlation_matrix.csv")%>%
   as.data.frame()
 rownames(corr_matrix) <- colnames(corr_matrix)
@@ -792,14 +734,14 @@ mat_heat <- pheatmap::pheatmap(corr_matrix, color = color,
                                legend=T, fontsize = 10,
                                show_rownames = T, show_colnames = F,treeheight_col = 0,
                                silent=T, annotation_col = annotation_df)
-p_S3.1 <- ggplotify::as.ggplot(mat_heat) +
+p_S5.1 <- ggplotify::as.ggplot(mat_heat) +
   theme(plot.margin = unit(c(0,0,0,0), "cm"))
 
-pdf("figures/manuscript/pS3.1.pdf", width = 10, height = 10)
-p_S3.1
+pdf("figures/manuscript/pS5.1.pdf", width = 10, height = 10)
+p_S5.1
 dev.off()
 
-### S3.2 Weighting strategy
+### S5.2 Weighting strategy
 bench_weights_res <- read_csv("output/benchmark/benchmark_weights_res.csv")
 bench_weights_res <- bench_weights_res %>%
   filter(net %in% c("collecTRI", "matRid1raw")) %>%
@@ -835,7 +777,7 @@ t.test(bench_weights_res  %>%
          filter(net == "weighted CollecTRI") %>%
          pull(score))
 
-p_S3.2.1 <- bench_weights_res %>%
+p_S5.2.1 <- bench_weights_res %>%
   filter(method == "consensus_estimate") %>%
   filter(metric == "mcauroc") %>%
   ggplot(aes(x=net, y=score, fill=net)) +
@@ -848,7 +790,7 @@ p_S3.2.1 <- bench_weights_res %>%
   ylab("AUROC") +
   xlab("")
 
-p_S3.2.2 <- bench_weights_res %>%
+p_S5.2.2 <- bench_weights_res %>%
   filter(method == "consensus_estimate") %>%
   filter(metric == "mcauprc") %>%
   ggplot(aes(x=net, y=score, fill=net)) +
@@ -861,12 +803,12 @@ p_S3.2.2 <- bench_weights_res %>%
   ylab("AUPRC") +
   xlab("")
 
-pdf("figures/manuscript/pS3.2.1.pdf", width = 2.5, height = 2.5)
-p_S3.2.1
+pdf("figures/manuscript/pS5.2.1.pdf", width = 2.5, height = 2.5)
+p_S5.2.1
 dev.off()
 
-pdf("figures/manuscript/pS3.2.2.pdf", width = 2.5, height = 2.5)
-p_S3.2.2
+pdf("figures/manuscript/pS5.2.2.pdf", width = 2.5, height = 2.5)
+p_S5.2.2
 dev.off()
 
 ## Use weights as filtering
@@ -895,7 +837,7 @@ order_net <- bench_filtered_res %>%
 bench_filtered_res$net <- factor(bench_filtered_res$net, levels = rev(order_net$net))
 bench_filtered_res$quantile <- factor(bench_filtered_res$quantile, levels = c("0%", "10%", "20%", "30%"))
 
-p_S3.3.1 <- bench_filtered_res %>%
+p_S5.3.1 <- bench_filtered_res %>%
   filter(method == "consensus_estimate") %>%
   filter(metric == "mcauroc") %>%
   ggplot(aes(x=weightingMethod, y=score, fill=quantile)) +
@@ -908,7 +850,7 @@ p_S3.3.1 <- bench_filtered_res %>%
   ylab("AUROC") +
   xlab("Basis for the removal of edges from CollecTRI")
 
-p_S3.3.2 <- bench_filtered_res %>%
+p_S5.3.2 <- bench_filtered_res %>%
   filter(method == "consensus_estimate") %>%
   filter(metric == "mcauprc") %>%
   ggplot(aes(x=weightingMethod, y=score, fill=quantile)) +
@@ -922,12 +864,12 @@ p_S3.3.2 <- bench_filtered_res %>%
   xlab("Basis for the removal of edges from CollecTRI")
 
 
-pdf("figures/manuscript/pS3.3.1.pdf", width = 4, height = 2)
-p_S3.3.1
+pdf("figures/manuscript/pS5.3.1.pdf", width = 4, height = 2)
+p_S5.3.1
 dev.off()
 
-pdf("figures/manuscript/pS3.3.2.pdf", width = 4, height = 2)
-p_S3.3.2
+pdf("figures/manuscript/pS5.3.2.pdf", width = 4, height = 2)
+p_S5.3.2
 dev.off()
 
 
