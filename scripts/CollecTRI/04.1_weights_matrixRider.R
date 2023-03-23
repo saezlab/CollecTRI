@@ -14,7 +14,7 @@ source("scripts/helper/weights_functions.R")
 ## Load data ---------------------------
 # define version and load signed network
 output.folder <- "output"
-raw.file <- "output/CollecTRI/CollecTRI.csv"
+raw.file <- "output/CollecTRI/CollecTRI_GRN.csv"
 
 GRN <- read_csv(raw.file)
 

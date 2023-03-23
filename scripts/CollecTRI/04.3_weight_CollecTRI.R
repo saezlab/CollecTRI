@@ -8,7 +8,7 @@ set.seed(713)
 
 ## Load data ---------------------------
 output.folder <- "output"
-collecTRI <- read_csv( "output/CollecTRI/CollecTRI.csv") %>%
+collecTRI <- read_csv( "output/CollecTRI/CollecTRI_GRN.csv") %>%
   dplyr::mutate(edge = paste(source, target, sep = "."))
 
 weigths.files <- list.files(file.path("output", "weighted_networks", "raw"), full.names = T)
