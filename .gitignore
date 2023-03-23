@@ -8,4 +8,5 @@ output/
 data/
 omnipathr-log/
 figures/
-.ipynb_checkpoints/
+*.ipynb_checkpoints*
+pypath_log/
