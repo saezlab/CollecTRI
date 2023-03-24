@@ -120,9 +120,9 @@ norm_net <- map_dfc(names(weights_networks), function(idx_net){
 
 
 ## compare correlation of weights ---------------------------
-rownames(norm_net) <- norm_net$matrixRider_10000bp_edge
+rownames(norm_net) <- norm_net[,colnames(norm_net)[str_detect(colnames(norm_net), "edge")][1]]
 norm_net <- norm_net[!str_detect(colnames(norm_net), "edge")]
-norm_net <- cbind(norm_net, unweighted = sign(norm_net$matrixRider_1000bp_raw))
+norm_net <- cbind(norm_net, unweighted = sign(norm_net[1]))
 
 write_csv(cor(norm_net) %>% as.data.frame(),
           file.path(output.folder,"weighted_networks", "correlation_matrix.csv"))
@@ -151,7 +151,7 @@ net_filtered <- map(names(weights_networks), function(idx_net){
   })
 })
 
-net_unweighted <- weights_networks$matrixRider_1000bp %>%
+net_unweighted <- weights_networks[[1]] %>%
   left_join(collecTRI %>% select(edge, weight), by = "edge") %>%
   select(source, target, weight)
 
