@@ -15,7 +15,7 @@ n.load(netres.tf_mirna['collectri'])
 e = export.Export(n)
 e.make_df(unique_pairs=False)
 
-e.df['weight'] = np.where(e.df['consensus_stimulation'] == 1, 1, np.where(e.df['consensus_inhibition'] == 1, -1, np.nan))
+e.df['weight'] = np.where(e.df['is_stimulation'] == 1, 1, np.where(e.df['is_inhibition'] == 1, -1, np.nan))
 e.df = e.df.loc[:, ['source_genesymbol', 'target_genesymbol', 'weight', 'sources', 'references']].rename(columns={'source_genesymbol': 'source', 'target_genesymbol': 'target', 'sources': 'resources'})
 
 e.df.drop_duplicates(inplace=True)
