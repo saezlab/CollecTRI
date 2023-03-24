@@ -18,4 +18,5 @@ e.make_df(unique_pairs=False)
 e.df['weight'] = np.where(e.df['consensus_stimulation'] == 1, 1, np.where(e.df['consensus_inhibition'] == 1, -1, np.nan))
 e.df = e.df.loc[:, ['source_genesymbol', 'target_genesymbol', 'weight', 'sources', 'references']].rename(columns={'source_genesymbol': 'source', 'target_genesymbol': 'target', 'sources': 'resources'})
 
+e.df.drop_duplicates(inplace=True)
 pd.DataFrame.to_csv(e.df, "output/CollecTRI/CollecTRI_GRN.csv", index = False)
