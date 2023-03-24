@@ -356,7 +356,81 @@ pdf("figures/manuscript/p2.2.2.pdf", width = 3.7, height = 2.4)
 p_2.2.2
 dev.off()
 
-## Supp 1 Sign ---------------------------
+## Supp 1 Resources CollecTRI source ---------------------------
+raw.file <- "data/CollecTRI.tsv"
+
+collecTRI.raw <- read.table(raw.file,
+                            sep = "\t",
+                            header = TRUE) # load raw resource list
+resources <- colnames(collecTRI.raw)[str_detect(colnames(collecTRI.raw), "PMID")] %>%
+  str_remove("..PMID") %>%
+  str_remove("X.")
+
+egdes_resource <- map(resources, function(resource){
+  res_df <- collecTRI.raw[,paste0("X.", resource, "..present")]
+  collecTRI.raw$TF.TG[res_df != ""]
+})
+
+unique_int <- lapply(1:length(egdes_resource), function(n) length(setdiff(egdes_resource[[n]], unlist(egdes_resource[-n])))) %>% unlist()
+
+df_TRI <- data.frame(resource = rep(resources, times = 2),
+           count = c(unique_int, map_dbl(egdes_resource, length) - unique_int),
+           type = rep(c("unique", "shared"), each = length(resources)),
+           class = "TRI"
+           )
+
+tfs_resource <- map(resources, function(resource){
+  res_df <- collecTRI.raw[,paste0("X.", resource, "..present")]
+  edges <- collecTRI.raw$TF.TG[res_df != ""]
+  map_chr(str_split(edges, ":"), 1) %>% unique()
+})
+
+unique_tfs <- lapply(1:length(tfs_resource), function(n) length(setdiff(tfs_resource[[n]], unlist(tfs_resource[-n])))) %>% unlist()
+
+df_TFs <- data.frame(resource = rep(resources, times = 2),
+                     count = c(unique_tfs, map_dbl(tfs_resource, length) - unique_tfs),
+                     type = rep(c("unique", "shared"), each = length(resources)),
+                     class = "TF"
+)
+
+tgs_resource <- map(resources, function(resource){
+  res_df <- collecTRI.raw[,paste0("X.", resource, "..present")]
+  edges <- collecTRI.raw$TF.TG[res_df != ""]
+  map_chr(str_split(edges, ":"), 2) %>% unique()
+})
+
+unique_tgs <- lapply(1:length(tgs_resource), function(n) length(setdiff(tgs_resource[[n]], unlist(tgs_resource[-n])))) %>% unlist()
+
+df_TGs <- data.frame(resource = rep(resources, times = 2),
+                     count = c(unique_tgs, map_dbl(tgs_resource, length) - unique_tgs),
+                     type = rep(c("unique", "shared"), each = length(resources)),
+                     class = "TG"
+)
+
+df_resource <- rbind(df_TRI, df_TFs, df_TGs)
+
+df_resource$resource <- factor(df_resource$resource, levels = df_TFs %>% arrange(desc(count)) %>% pull(resource) %>% unique())
+
+p_S1 <- ggplot(df_resource, aes(fill=type, y=count, x=resource)) +
+  geom_bar(position="stack", stat="identity") +
+  scale_fill_manual(values=c("#b2c6e8", "#496bac")) +
+  facet_grid(class ~ ., scales='free_y') +
+  #coord_flip() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        text = element_text(size = 9),
+        legend.position = "right",
+        panel.spacing = unit(1, "lines")) +
+  ylab("Total Size") +
+  xlab("Resource")
+
+pdf("figures/manuscript/pS1.pdf", width = 6, height = 5)
+p_S1
+dev.off()
+
+## Supp 2 Sign ---------------------------
 # Add information about sign decision
 sign_collecTRI_dec <- read.csv("output/CollecTRI/CollecTRI_signDecis.csv")
 sign_collecTRI <- left_join(collecTRI, sign_collecTRI_dec %>% dplyr::select(source, target, decision), by = c("source", "target"))
@@ -375,7 +449,7 @@ decision_df <- sign_collecTRI %>%
 decision_df <- rbind(decision_df, data.frame(decision = "Default activation", weight = "repression", total = 0))
 decision_df$decision <- factor(decision_df$decision, levels = unique(decision_df$decision))
 
-p_S1.1 <- ggplot(data=decision_df, aes(x=decision, y=total, fill=weight)) +
+p_S2.1 <- ggplot(data=decision_df, aes(x=decision, y=total, fill=weight)) +
   geom_bar(stat="identity", position=position_dodge(width = 0.85), width = 0.8) +
   theme_minimal() +
   scale_fill_manual(values=c('#91B57D','#A55A5B')) +
@@ -390,8 +464,8 @@ decision_df %>%
   group_by(decision) %>%
   summarise(all = sum(total))
 
-pdf("figures/manuscript/pS1.1.pdf", width = 4, height = 3.7)
-p_S1.1
+pdf("figures/manuscript/pS2.1.pdf", width = 4, height = 3.7)
+p_S2.1
 dev.off()
 
 bench_sign_collecTRI <- read.csv("output/benchmark/benchmark_sign_res.csv")
@@ -407,7 +481,7 @@ order_net <- bench_sign_collecTRI %>%
   arrange(desc(mean))
 bench_sign_collecTRI$net <- factor(bench_sign_collecTRI$net, levels = rev(order_net$net))
 
-p_S1.2.1 <- bench_sign_collecTRI %>%
+p_S2.2.1 <- bench_sign_collecTRI %>%
   filter(method == "consensus_estimate") %>%
   filter(metric == "mcauroc") %>%
   ggplot(aes(x=net, y=score, fill=net)) +
@@ -424,7 +498,7 @@ p_S1.2.1 <- bench_sign_collecTRI %>%
   ylab("AUROC") +
   xlab("")
 
-p_S1.2.2 <- bench_sign_collecTRI %>%
+p_S2.2.2 <- bench_sign_collecTRI %>%
   filter(method == "consensus_estimate") %>%
   filter(metric == "mcauprc") %>%
   ggplot(aes(x=net, y=score, fill=net)) +
@@ -442,15 +516,15 @@ p_S1.2.2 <- bench_sign_collecTRI %>%
   xlab("")
 
 
-pdf("figures/manuscript/pS1.2.1.pdf", width = 2, height = 2.5)
-p_S1.2.1
+pdf("figures/manuscript/pS2.2.1.pdf", width = 2, height = 2.5)
+p_S2.2.1
 dev.off()
 
-pdf("figures/manuscript/pS1.2.2.pdf", width = 2, height = 2.5)
-p_S1.2.2
+pdf("figures/manuscript/pS2.2.2.pdf", width = 2, height = 2.5)
+p_S2.2.2
 dev.off()
 
-## Supp 2 TF with at least five targets ---------------------------
+## Supp 3 TF with at least five targets ---------------------------
 nTF_df <- map_dfr(names(networks), function(net_i){
   net <- networks[[net_i]]
 
@@ -482,7 +556,7 @@ nTF_df$net <- factor(nTF_df$net, levels=order_net)
 nTF_df$TF <- factor(nTF_df$TF, levels=c("all", "at least 5 targets"))
 
 
-p_S2 <- ggplot(data=nTF_df, aes(x=net, y=nTFs, fill=TF)) +
+p_S3 <- ggplot(data=nTF_df, aes(x=net, y=nTFs, fill=TF)) +
   geom_bar(stat="identity", position=position_dodge())+
   scale_fill_brewer(palette="Paired")+
   theme_minimal() +
@@ -493,12 +567,12 @@ p_S2 <- ggplot(data=nTF_df, aes(x=net, y=nTFs, fill=TF)) +
         legend.key.size = unit(0.3, "cm")) +
   guides(fill=guide_legend(title=""))
 
-pdf("figures/manuscript/pS2.pdf", width = 6, height = 3.4)
-p_S2
+pdf("figures/manuscript/pS3.pdf", width = 6, height = 3.4)
+p_S3
 dev.off()
 
-## Supp 3 Bias ---------------------------
-### S3.1 Size difference between TFs in benchmark and background
+## Supp 4 Bias ---------------------------
+### S4.1 Size difference between TFs in benchmark and background
 TFs_bench <- obs_filtered$TF %>% unique()
 
 TFs_collecTRI <- table(collecTRI$source) %>% as.data.frame() %>%
@@ -536,7 +610,7 @@ stat.test <- TF_df %>%
     p.adj < 0.05 & p.adj >= 0.01 ~ "*",
   ))
 
-p_S3.1 <- ggboxplot(TF_df, x = "network", y = "nTargets", fill = "benchmark", outlier.size=0.2, lwd=0.2) +
+p_S4.1 <- ggboxplot(TF_df, x = "network", y = "nTargets", fill = "benchmark", outlier.size=0.2, lwd=0.2) +
   theme_minimal() +
   stat_pvalue_manual(stat.test,  label = "p.adj.signif",
                      tip.length = 0.01, bracket.nudge.y = -2) +
@@ -546,11 +620,11 @@ p_S3.1 <- ggboxplot(TF_df, x = "network", y = "nTargets", fill = "benchmark", ou
   ylab("Number of targets")
 
 
-pdf("figures/manuscript/pS3.1.pdf", width = 6, height = 2.8)
-p_S3.1
+pdf("figures/manuscript/pS4.1.pdf", width = 6, height = 2.8)
+p_S4.1
 dev.off()
 
-### S3.2 Correlation per exp
+### S4.2 Correlation per exp
 # correlation per experiment
 cor_perExp <- map_dfr(names(act), function(act_i){
   act_df <- act[[act_i]] %>%
@@ -591,7 +665,7 @@ labels_plot <- cor_perExp %>%
   paste0("mean(r) = ", .)
 names(labels_plot) <- unique(cor_perExp %>% pull(network))
 
-p_S3.2 <- ggplot(cor_perExp ,
+p_S4.2 <- ggplot(cor_perExp ,
                  aes(x = pearson.cor, fill = network) ) +
   geom_histogram(bins = 50) +
   theme_minimal() +
@@ -603,11 +677,11 @@ p_S3.2 <- ggplot(cor_perExp ,
   facet_grid(. ~ network, labeller = as_labeller(labels_plot))
 
 
-pdf("figures/manuscript/pS3.2.pdf", width = 6, height = 2.7)
-p_S3.2
+pdf("figures/manuscript/pS4.2.pdf", width = 6, height = 2.7)
+p_S4.2
 dev.off()
 
-## Supp 4 Benchmark per source ---------------------------
+## Supp 5 Benchmark per source ---------------------------
 bench_signed_source_res <- read_csv("output/benchmark/benchmark_source_res.csv")
 bench_signed_source_res <- bench_signed_source_res %>%
   mutate(net = recode(net,
@@ -633,7 +707,7 @@ signed_source_summarized <- bench_signed_source_res %>%
 
 signed_source_summarized$Network <- factor(signed_source_summarized$Network, levels = unique(signed_source_summarized$Network))
 
-p_S4.1 <- ggplot(signed_source_summarized, aes(color=Network, y=mcauprc, x=mcauroc)) +
+p_S5.1 <- ggplot(signed_source_summarized, aes(color=Network, y=mcauprc, x=mcauroc)) +
   geom_point(position=position_jitter(h=0.02,w=0.02), size = 1) +
   geom_vline(xintercept=0.5, linetype="dashed", color = "black", alpha = 0.4) +
   geom_hline(yintercept=0.5, linetype="dashed", color = "black", alpha = 0.4) +
@@ -661,7 +735,7 @@ top_performing_method <- data.frame(network = signed_source_summarized$Network,
                                     score = c(signed_source_summarized$mcauroc, signed_source_summarized$mcauprc),
                                     metric = rep(c("mcauroc", "mcauprc"), each = nrow(signed_source_summarized)))
 
-p_S4.2.1 <- top_performing_method %>%
+p_S5.2.1 <- top_performing_method %>%
   filter(metric == "mcauroc") %>%
   ggplot(aes(x=network, y=score, fill=network)) +
   geom_boxplot(outlier.size=0.2, lwd=0.2) +
@@ -674,7 +748,7 @@ p_S4.2.1 <- top_performing_method %>%
   ylab("median AUROC") +
   xlab("")
 
-p_S4.2.2 <- top_performing_method %>%
+p_S5.2.2 <- top_performing_method %>%
   filter(metric == "mcauprc") %>%
   ggplot(aes(x=network, y=score, fill=network)) +
   geom_boxplot(outlier.size=0.2, lwd=0.2) +
@@ -688,21 +762,21 @@ p_S4.2.2 <- top_performing_method %>%
   xlab("")
 
 
-pdf("figures/manuscript/pS4.1.pdf", width = 4.4, height = 4.2)
-p_S4.1
+pdf("figures/manuscript/pS5.1.pdf", width = 4.4, height = 4.2)
+p_S5.1
 dev.off()
 
-pdf("figures/manuscript/pS4.2.1.pdf", width = 1.5, height = 2.5)
-p_S4.2.1
+pdf("figures/manuscript/pS5.2.1.pdf", width = 1.5, height = 2.5)
+p_S5.2.1
 dev.off()
 
-pdf("figures/manuscript/pS4.2.2.pdf", width = 1.5, height = 2.5)
-p_S4.2.2
+pdf("figures/manuscript/pS5.2.2.pdf", width = 1.5, height = 2.5)
+p_S5.2.2
 dev.off()
 
 
-## Supp 5 weights ---------------------------
-### S5.1 Correlation between weighting strategy
+## Supp 6 weights ---------------------------
+### S6.1 Correlation between weighting strategy
 corr_matrix <- read_csv("output/weighted_networks/correlation_matrix.csv")%>%
   as.data.frame()
 rownames(corr_matrix) <- colnames(corr_matrix)
@@ -737,11 +811,11 @@ mat_heat <- pheatmap::pheatmap(corr_matrix, color = color,
 p_S5.1 <- ggplotify::as.ggplot(mat_heat) +
   theme(plot.margin = unit(c(0,0,0,0), "cm"))
 
-pdf("figures/manuscript/pS5.1.pdf", width = 10, height = 10)
-p_S5.1
+pdf("figures/manuscript/pS6.1.pdf", width = 10, height = 10)
+p_S6.1
 dev.off()
 
-### S5.2 Weighting strategy
+### S6.2 Weighting strategy
 bench_weights_res <- read_csv("output/benchmark/benchmark_weights_res.csv")
 bench_weights_res <- bench_weights_res %>%
   filter(net %in% c("collecTRI", "matRid1raw")) %>%
@@ -777,7 +851,7 @@ t.test(bench_weights_res  %>%
          filter(net == "weighted CollecTRI") %>%
          pull(score))
 
-p_S5.2.1 <- bench_weights_res %>%
+p_S6.2.1 <- bench_weights_res %>%
   filter(method == "consensus_estimate") %>%
   filter(metric == "mcauroc") %>%
   ggplot(aes(x=net, y=score, fill=net)) +
@@ -790,7 +864,7 @@ p_S5.2.1 <- bench_weights_res %>%
   ylab("AUROC") +
   xlab("")
 
-p_S5.2.2 <- bench_weights_res %>%
+p_S6.2.2 <- bench_weights_res %>%
   filter(method == "consensus_estimate") %>%
   filter(metric == "mcauprc") %>%
   ggplot(aes(x=net, y=score, fill=net)) +
@@ -803,12 +877,12 @@ p_S5.2.2 <- bench_weights_res %>%
   ylab("AUPRC") +
   xlab("")
 
-pdf("figures/manuscript/pS5.2.1.pdf", width = 2.5, height = 2.5)
-p_S5.2.1
+pdf("figures/manuscript/pS6.2.1.pdf", width = 2.5, height = 2.5)
+p_S6.2.1
 dev.off()
 
-pdf("figures/manuscript/pS5.2.2.pdf", width = 2.5, height = 2.5)
-p_S5.2.2
+pdf("figures/manuscript/pS6.2.2.pdf", width = 2.5, height = 2.5)
+p_S6.2.2
 dev.off()
 
 ## Use weights as filtering
@@ -837,7 +911,7 @@ order_net <- bench_filtered_res %>%
 bench_filtered_res$net <- factor(bench_filtered_res$net, levels = rev(order_net$net))
 bench_filtered_res$quantile <- factor(bench_filtered_res$quantile, levels = c("0%", "10%", "20%", "30%"))
 
-p_S5.3.1 <- bench_filtered_res %>%
+p_S6.3.1 <- bench_filtered_res %>%
   filter(method == "consensus_estimate") %>%
   filter(metric == "mcauroc") %>%
   ggplot(aes(x=weightingMethod, y=score, fill=quantile)) +
@@ -850,7 +924,7 @@ p_S5.3.1 <- bench_filtered_res %>%
   ylab("AUROC") +
   xlab("Basis for the removal of edges from CollecTRI")
 
-p_S5.3.2 <- bench_filtered_res %>%
+p_S6.3.2 <- bench_filtered_res %>%
   filter(method == "consensus_estimate") %>%
   filter(metric == "mcauprc") %>%
   ggplot(aes(x=weightingMethod, y=score, fill=quantile)) +
@@ -864,12 +938,12 @@ p_S5.3.2 <- bench_filtered_res %>%
   xlab("Basis for the removal of edges from CollecTRI")
 
 
-pdf("figures/manuscript/pS5.3.1.pdf", width = 4, height = 2)
-p_S5.3.1
+pdf("figures/manuscript/pS6.3.1.pdf", width = 4, height = 2)
+p_S6.3.1
 dev.off()
 
-pdf("figures/manuscript/pS5.3.2.pdf", width = 4, height = 2)
-p_S5.3.2
+pdf("figures/manuscript/pS6.3.2.pdf", width = 4, height = 2)
+p_S6.3.2
 dev.off()
 
 
