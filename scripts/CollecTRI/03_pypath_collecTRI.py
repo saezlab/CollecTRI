@@ -22,8 +22,8 @@ e.df['weight'] = np.where(e.df['is_stimulation'] == 1, 1, np.where(e.df['is_inhi
 e.df = e.df.loc[:, ['source_genesymbol', 'target_genesymbol', 'weight', 'sources', 'references']].rename(columns={'source_genesymbol': 'source', 'target_genesymbol': 'target', 'sources': 'resources'})
 
 #split data frame into interactions from complexes to merge them again
-intdf = e.df[indx_int]
-compdf = e.df[indx_comp]
+intdf = e.df[indx_int].copy()
+compdf = e.df[indx_comp].copy()
 compdf['source'] = compdf['source'].astype(str)
 
 #return to complex name
