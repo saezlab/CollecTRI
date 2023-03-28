@@ -29,15 +29,13 @@ Graphical abstract
 
 
 ## Data availability 
-CollecTRI is available through the
-[OmniPath](https://omnipathdb.org/) or  
-[DoRothEA](https://saezlab.github.io/dorothea/) packages.
+CollecTRI is available through the [OmniPath](https://omnipathdb.org/) or [DoRothEA](https://saezlab.github.io/dorothea/) packages.
 
 
 ## Scripts
 For more information about CollecTRI, please check out the following scripts:
 
-- [Construction of CollecTRI](https://github.com/saezlab/CollecTRI/tree/main/scripts/CollecTRI)
+- [Construction of CollecTRI regulons](https://github.com/saezlab/CollecTRI/tree/main/scripts/CollecTRI)
 - [Benchmark](https://github.com/saezlab/CollecTRI/tree/main/scripts/benchmark)
   - [Systematic comparison](https://github.com/saezlab/CollecTRI/blob/main/scripts/benchmark/benchmark.ipynb)
   - [Evaluation of binding weights](https://github.com/saezlab/CollecTRI/blob/main/scripts/benchmark/benchmark_weights.ipynb)
