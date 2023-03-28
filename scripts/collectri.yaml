@@ -23,6 +23,7 @@ dependencies:
   - r-ggsignif
   - r-rstatix
   - r-ggpubr
+  - r-ggplotify
   - r-caret
   - r-rcolorbrewer
   - r-pheatmap

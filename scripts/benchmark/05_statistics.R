@@ -46,27 +46,29 @@ auprc_mat <- bench_agnositc_res %>%
 
 auprc_mat$CollecTRI %>% median()
 
+multi.ttest <- function(mat, pVal = T, alternative = "two.sided") {
+  mat <- as.matrix(mat)
+  n <- ncol(mat)
+  p.mat<- matrix(NA, n, n)
+  diag(p.mat) <- 1
+  for (i in 1:(n - 1)) {
+    for (j in (i + 1):n) {
+      test <- t.test(mat[, i], mat[, j], alternative = "two.sided")
+      if(pVal){
+        p.mat[i, j] <- p.mat[j, i] <- test$p.value
+      } else {
+        p.mat[i, j] <- p.mat[j, i] <- test$statistic
+      }
+      
+    }
+  }
+  colnames(p.mat) <- rownames(p.mat) <- colnames(mat)
+  p.mat
+}
+
 ### Perform t-test
 perform.multi.ttest <- function(mat){
-  multi.ttest <- function(mat, pVal = T, alternative = "two.sided") {
-    mat <- as.matrix(mat)
-    n <- ncol(mat)
-    p.mat<- matrix(NA, n, n)
-    diag(p.mat) <- 1
-    for (i in 1:(n - 1)) {
-      for (j in (i + 1):n) {
-        test <- t.test(mat[, i], mat[, j], alternative = "two.sided")
-        if(pVal){
-          p.mat[i, j] <- p.mat[j, i] <- test$p.value
-        } else {
-          p.mat[i, j] <- p.mat[j, i] <- test$statistic
-        }
-
-      }
-    }
-    colnames(p.mat) <- rownames(p.mat) <- colnames(mat)
-    p.mat
-  }
+  
   # extract p_values
   ttest.p <- multi.ttest(mat) %>%
     as.data.frame() %>%
@@ -253,7 +255,7 @@ mean(source_auprc_mat$CollecTRI[rownames(source_auroc_mat) %in% c("TP53", "FLI1"
 
 
 ## Weights ---------------------------
-benchmark_weights <- read_csv("output/040722/benchmark/weights_res.csv")
+benchmark_weights <- read_csv("output/benchmark/benchmark_weights_res.csv")
 
 auroc_mat_weights <- benchmark_weights %>%
   filter(metric == "mcauroc") %>%
@@ -294,7 +296,7 @@ auroc.ttest_weights <- auroc.ttest.p_weights %>%
 auroc.ttest_weights %>% filter(net1 == "collecTRI")
 
 comp_full_coverage <- cbind(auprc_mat_weights[c("FIMO10gene", "matRid10gene")],
-      auprc_mat[c("collecTRI_signed")])
+      auprc_mat[c("CollecTRI")])
 auroc.ttest.p_coverage <- multi.ttest(comp_full_coverage) %>%
   as.data.frame() %>%
   rownames_to_column("net1") %>%
