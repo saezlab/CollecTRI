@@ -156,7 +156,7 @@ get_TFcategory <- function(path){
 
 
 # Run
-get_TFcategory('data/TFcategory')
+# get_TFcategory('data/TFcategory')
 
 generate_TFlist <- function(path){
   tf_files <- list.files(path, pattern = ".csv")
@@ -188,4 +188,4 @@ generate_TFlist <- function(path){
 }
 
 # Run
-generate_TFlist('data/TFcategory')
+# generate_TFlist('data/TFcategory')
