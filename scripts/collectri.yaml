@@ -1,0 +1,38 @@
+name: collectri
+channels:
+  - conda-forge
+  - bioconda
+  - r
+  - defaults
+dependencies:
+  - r-base # general dependencies
+  - r-tidyverse
+  - r-devtools
+  - bioconductor-matrixrider=1.30.0 # dependencies for CollecTRI GRN generation:
+  - bioconductor-memes=1.6.0
+  - bioconductor-motifdb
+  - bioconductor-tfbstools
+  - bioconductor-biostrings
+  - bioconductor-org.hs.eg.db
+  - bioconductor-genomicranges
+  - bioconductor-genomicfeatures
+  - bioconductor-txdb.hsapiens.ucsc.hg38.knowngene #=3.4.6
+  - bioconductor-universalmotif
+  - bioconductor-decoupler # dependency required for case study
+  - r-upsetr # dependencies required for supplementary figures:
+  - r-ggsignif
+  - r-rstatix
+  - r-ggpubr
+  - r-caret
+  - r-rcolorbrewer
+  - r-pheatmap
+  - python<3.11 #dependencies for benchmark:
+  - pandas
+  - matplotlib
+  - jupyter
+  - numpy
+  - pip
+  - pycurl
+  - pip:
+    - decoupler=1.2.0
+    - git+https://github.com/saezlab/pypath@3d28c5f7c8fab1bff9b353a6e4f86bd1cc33738d
