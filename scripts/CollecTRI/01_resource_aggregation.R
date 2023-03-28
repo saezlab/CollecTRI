@@ -92,7 +92,7 @@ aggregate_resources <- function(collecTRI.raw){
     }
 
     # change PMID with activation + unknown or repression + unknown to activation
-    # and respression, respectively
+    # or repression, respectively
 
     final_TF.TG <- table_TF.TG %>%
       mutate(Sign = case_when(
