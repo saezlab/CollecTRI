@@ -10,7 +10,7 @@ filter_for_TFs <- function(df){
 
 get_regnetwork <- function(path, confs=c('High', 'Medium', 'Low'), filterTFs = T){
   temp <- tempfile()
-  download.file("https://regnetworkweb.org/download/human.zip",temp)
+  download.file("https://regnetworkweb.org/download/human.zip",temp, 'curl', extra='--insecure')
   df <- read.table(unz(temp, "human.source"))
   unlink(temp)
 
@@ -194,5 +194,5 @@ get_data <- function(path, filterTFs = T){
 }
 
 # Run
-get_data('data/networks')
-get_data('data/networks', filterTFs = F)
+# get_data('data/networks')
+# get_data('data/networks', filterTFs = F)
