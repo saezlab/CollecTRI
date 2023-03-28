@@ -8,8 +8,8 @@ library(tidyverse)
 library('org.Hs.eg.db')
 library(GenomicRanges)
 library(magrittr)
-#library(GenomicFeatures)
-#library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+library(GenomicFeatures)
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
 library(universalmotif)
 library(memes)
 source("scripts/helper/weights_functions.R")
@@ -21,13 +21,15 @@ options(meme_bin = "/opt/local/bin/")
 output.folder <- "output"
 raw.file <- "output/CollecTRI/CollecTRI_GRN.csv"
 
-GRN <- read_csv(raw.file)
 
 # construct or load promoter sequence of target genes
 prom_lengths <- c("1000", "10000") #number of base pairs
 dir.create(file.path("data", "promoter_sequence"), showWarnings = FALSE)
 
 for (prom_length in prom_lengths){
+  
+  GRN <- read_csv(raw.file)
+  
   if (length(list.files(file.path("data", "promoter_sequence"),
                         pattern = paste0("prom_sequence_", prom_length, ".rds"), )) == 0){
     prom_sequence <- getPromSeq(genes = unique(GRN$target), n_upstream = prom_length)
