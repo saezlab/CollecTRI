@@ -49,6 +49,8 @@ For more information about CollecTRI, please check out the following scripts:
 
 
 ## License
+CollecTRI is freely available to the community. The original licenses of all 
+resources included in CollecTRI can be found [here](https://github.com/saezlab/pypath/blob/master/pypath/resources/data/resources.json)
 
 
 ## Citation
