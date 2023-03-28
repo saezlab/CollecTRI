@@ -4,10 +4,10 @@
 <!-- badges: end -->
 
 ## Overview
-The CollecTRI GRN contains signed transcription factor (TF) - target gene 
-interactions compiled from 12 different resources. It provides 
+The CollecTRI-derived regulons contain signed transcription factor (TF) - target gene 
+interactions compiled from 12 different resources. This collection provides 
 an increased coverage of transcription factors and was benchmarked against 
-other known GRNs showing a superior performance in identifying perturbed TFs 
+other known GRNs, showing a superior performance in identifying perturbed TFs 
 based on gene expression data using the knockTF data sets.
 
 
@@ -29,10 +29,9 @@ Graphical abstract
 
 
 ## Data availability 
-CollecTRI is available through 
-[OmniPath] or the 
-[DoRothEA](http://bioconductor.org/packages/release/data/experiment/html/dorothea.html) 
-bioconductor package.
+CollecTRI is available through the
+[OmniPath](https://omnipathdb.org/) or  
+[DoRothEA](https://saezlab.github.io/dorothea/) packages.
 
 
 ## Scripts
@@ -49,7 +48,7 @@ For more information about CollecTRI, please check out the following scripts:
 
 
 ## License
-CollecTRI is freely available to the community. The original licenses of all 
+The CollecTRI-derived regulons are freely available to the community. The original licenses of all 
 resources included in CollecTRI can be found [here](https://github.com/saezlab/pypath/blob/master/pypath/resources/data/resources.json)
 
 
