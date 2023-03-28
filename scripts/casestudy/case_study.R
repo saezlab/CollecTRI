@@ -5,7 +5,7 @@ library(magrittr)
 
 ## Load files
 dorothea_ABC <- read.csv("data/networks/dorothea_ABC.csv")
-CollecTRI <- read.csv("output/CollecTRI/CollecTRI_GRN.csv")
+CollecTRI <- read.csv("output/CollecTRI/CollecTRI_GRN.csv") %>% rename(mor = weight)
 
 # In this use case we use data from CPTAC and three cancer types:
 # UCEC: Uterine Corpus Endometrial Carcinoma
