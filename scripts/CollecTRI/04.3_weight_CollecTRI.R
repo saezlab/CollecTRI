@@ -124,7 +124,7 @@ rownames(norm_net) <- norm_net[,colnames(norm_net)[str_detect(colnames(norm_net)
 norm_net <- norm_net[!str_detect(colnames(norm_net), "edge")]
 norm_net <- cbind(norm_net, unweighted = sign(norm_net[1]))
 
-write_csv(cor(norm_net) %>% as.data.frame(),
+write_csv(cor(norm_net, use ="pairwise.complete.obs") %>% as.data.frame(),
           file.path(output.folder,"weighted_networks", "correlation_matrix.csv"))
 
 
