@@ -8,7 +8,10 @@ library(UpSetR)
 library(ggsignif)
 library(rstatix)
 library(ggpubr)
-library(MLeval)
+if(!require("MLeval")){
+  install.packages('MLeval')
+  library(MLeval)
+}
 library(caret)
 library(RColorBrewer)
 library(pheatmap)
@@ -808,7 +811,7 @@ mat_heat <- pheatmap::pheatmap(corr_matrix, color = color,
                                legend=T, fontsize = 10,
                                show_rownames = T, show_colnames = F,treeheight_col = 0,
                                silent=T, annotation_col = annotation_df)
-p_S5.1 <- ggplotify::as.ggplot(mat_heat) +
+p_S6.1 <- ggplotify::as.ggplot(mat_heat) +
   theme(plot.margin = unit(c(0,0,0,0), "cm"))
 
 pdf("figures/manuscript/pS6.1.pdf", width = 10, height = 10)
