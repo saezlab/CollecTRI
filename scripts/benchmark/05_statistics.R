@@ -59,7 +59,7 @@ multi.ttest <- function(mat, pVal = T, alternative = "two.sided") {
       } else {
         p.mat[i, j] <- p.mat[j, i] <- test$statistic
       }
-      
+
     }
   }
   colnames(p.mat) <- rownames(p.mat) <- colnames(mat)
@@ -68,7 +68,7 @@ multi.ttest <- function(mat, pVal = T, alternative = "two.sided") {
 
 ### Perform t-test
 perform.multi.ttest <- function(mat){
-  
+
   # extract p_values
   ttest.p <- multi.ttest(mat) %>%
     as.data.frame() %>%
@@ -114,6 +114,18 @@ auroc.ttest <- perform.multi.ttest(auroc_mat) %>%
   mutate(p.adj = round(p.adj, digits = 2)) %>%
   select(-p.value)
 
+auroc.ttest <- auroc.ttest %>%
+  mutate(comp1_new = case_when(
+  t.value > 0 ~ comp1,
+  t.value < 0 ~ comp2))  %>%
+  mutate(comp2_new = case_when(
+    t.value > 0 ~ comp2,
+    t.value < 0 ~ comp1))  %>%
+  mutate(t.value_new = abs(t.value)) %>%
+  select(comp1_new, comp2_new, p.adj, t.value_new) %>%
+  rename("comp1" = comp1_new, "comp2" = comp2_new, "t.value" = t.value_new)
+
+
 auroc.ttest %>%
   filter(comp1 == "CollecTRI") %>%
   pull(t.value) %>%
@@ -122,6 +134,7 @@ auroc.ttest %>%
 auroc.ttest %>%
   filter(comp1 == "shuffled CollecTRI") %>%
   filter(t.value > 0) %>%
+  filter(p.adj < 0.05)
   pull(t.value) %>%
   mean()
 
@@ -131,6 +144,17 @@ auprc.ttest <- perform.multi.ttest(auprc_mat) %>%
   mutate(p.adj = round(p.adj, digits = 2)) %>%
   select(-p.value)
 
+auprc.ttest <- auprc.ttest %>%
+  mutate(comp1_new = case_when(
+    t.value > 0 ~ comp1,
+    t.value < 0 ~ comp2))  %>%
+  mutate(comp2_new = case_when(
+    t.value > 0 ~ comp2,
+    t.value < 0 ~ comp1))  %>%
+  mutate(t.value_new = abs(t.value)) %>%
+  select(comp1_new, comp2_new, p.adj, t.value_new) %>%
+  rename("comp1" = comp1_new, "comp2" = comp2_new, "t.value" = t.value_new)
+
 auprc.ttest %>%
   filter(comp1 == "CollecTRI") %>%
   pull(t.value) %>%
@@ -139,6 +163,7 @@ auprc.ttest %>%
 auprc.ttest %>%
   filter(comp1 == "shuffled CollecTRI") %>%
   filter(t.value > 0) %>%
+  filter(p.adj < 0.05) %>%
   pull(t.value) %>%
   mean()
 
