@@ -125,6 +125,7 @@ auroc.ttest <- auroc.ttest %>%
   select(comp1_new, comp2_new, p.adj, t.value_new) %>%
   rename("comp1" = comp1_new, "comp2" = comp2_new, "t.value" = t.value_new)
 
+auroc.ttest <- auroc.ttest %>% arrange(comp1, comp2)
 
 auroc.ttest %>%
   filter(comp1 == "CollecTRI") %>%
@@ -154,6 +155,8 @@ auprc.ttest <- auprc.ttest %>%
   mutate(t.value_new = abs(t.value)) %>%
   select(comp1_new, comp2_new, p.adj, t.value_new) %>%
   rename("comp1" = comp1_new, "comp2" = comp2_new, "t.value" = t.value_new)
+
+auprc.ttest <- auprc.ttest %>% arrange(comp1, comp2)
 
 auprc.ttest %>%
   filter(comp1 == "CollecTRI") %>%
