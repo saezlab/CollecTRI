@@ -360,7 +360,7 @@ p_2.2.2
 dev.off()
 
 ## Supp 1 Resources CollecTRI source ---------------------------
-raw.file <- "data/CollecTRI.tsv"
+raw.file <- "data/CollecTRI_source.tsv"
 
 collecTRI.raw <- read.table(raw.file,
                             sep = "\t",
@@ -436,7 +436,44 @@ dev.off()
 ## Supp 2 Sign ---------------------------
 # Add information about sign decision
 sign_collecTRI_dec <- read.csv("output/CollecTRI/CollecTRI_signDecis.csv")
-sign_collecTRI <- left_join(collecTRI, sign_collecTRI_dec %>% dplyr::select(source, target, decision), by = c("source", "target"))
+sign_collecTRI_dec <- sign_collecTRI_dec %>%
+  mutate(target = recode(target,
+                         "IFNA1" = "IFNA13",
+                         "NFKB" = "NFKB1",
+                         "CGB3" = "CGB5",
+                         "H3C14" = "H3C15",
+                         "HBA1" = "HBA2",
+                         "DEFB4A" = "DEFB4B",
+                         "C1orf116" = "SARG",
+                         "H4C14" = "H4C9",
+                         "H3C1" = "H3C4",
+                         "ARSE" = "ARSL",
+                         "DEFA1" = "DEFA1B",
+                         "MIR122" = "MIR122a",
+                         "MIMT1" = "TIMM17A",
+                         "CTAG1B" = "CTAG1A",
+                         "C4B" = "C4B_2",
+                         "H3-3B" = "H3-3A",
+                         "DEFB103B" = "DEFB103A",
+                         "H4C8" = "H4C9",
+                         "H3C2" = "H3C4",
+                         "H2AC8" = "H2AC4",
+                         "H2AC11" = "H2AC17",
+                         "H4C13" = "H4C9",
+                         "PRH1" = "PRH2",
+                         "H2BC7" = "H2BC8",
+                         "RPL9" = "RPL9P9",
+                         "SMN2" = "SMN1",
+                         "LGALS7B" = "LGALS7",
+                         "TP53TG3" = "TP53TG3C"))
+
+# transfer miRNA targets to match
+mir_target <- str_detect(collecTRI$target, "miR")
+collecTRI_signs <- collecTRI
+collecTRI_signs$target[mir_target] <- paste0("MIR", map_chr(str_split(collecTRI_signs$target[mir_target], "-"), 3))
+
+# merge with decision information
+sign_collecTRI <- left_join(collecTRI_signs, sign_collecTRI_dec %>% dplyr::select(source, target, decision), by = c("source", "target"), multiple = "all")
 
 decision_df <- sign_collecTRI %>%
   group_by(decision, weight) %>%
