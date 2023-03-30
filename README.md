@@ -20,7 +20,7 @@ You can also load the regulons through R:
 ```r
 ## load collecTRI regulons via Omnipath
 ## the complexes AP1 and NFKB are listed with all potential constituents
-OmnipathR::import_omnipath_interactions(resources = 'CollecTRI', datasets = 'collectri', type = 'transcriptional')
+OmnipathR::collectri()
 ```
 
 ## Resources included in CollecTRI
