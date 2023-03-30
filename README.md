@@ -10,24 +10,10 @@ an increased coverage of transcription factors and was benchmarked against
 other known GRNs, showing a superior performance in identifying perturbed TFs 
 based on gene expression data using the knockTF data sets.
 
-
-Graphical abstract
-<img src="man/figures/overview.png" align="center" width="600">
-
+<img src="man/figures/overview.png" align="center" width="500">
 
 ## Resources included in CollecTRI
-- ExTRI
-- HTRI
-- TRRUST
-- TFActS
-- IntAct
-- SIGNOR
-- CytReg
-- GEREDB
-- Pavlidis
-- DoRothEA A
-- NTNU curations
-
+ExTRI, HTRI, TRRUST, TFActS, IntAct, SIGNOR, CytReg, GEREDB, Pavlidis, DoRothEA A, NTNU curations
 
 ## Data availability 
 The CollecTRI regulons are available through the [OmniPath](https://omnipathdb.org/) or [DoRothEA](https://saezlab.github.io/dorothea/) packages.
@@ -39,7 +25,6 @@ You can also load the regulons through R:
 
 OmnipathR::import_omnipath_interactions(resources = 'CollecTRI', datasets = 'collectri', type = 'transcriptional')
 ```
-
 
 ## Scripts
 For more information about the CollecTRI-derived regulons, please check out the following scripts:
