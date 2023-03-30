@@ -11,6 +11,9 @@ CollecTRI <- read.csv("output/CollecTRI/CollecTRI_GRN.csv") %>% rename(mor = wei
 # UCEC: Uterine Corpus Endometrial Carcinoma
 # LUAD: Lung Adenocarcinoma
 # CCRCC: Clear Cell Renal Cell Carcinoma
+download.file("https://zenodo.org/record/7773985/files/ucec_counts_tvalues.csv?download=1", file.path("data", "CPTAC_DEGs", "ucec_counts_tvalues.csv"))
+download.file("https://zenodo.org/record/7773985/files/luad_counts_tvalues.csv?download=1", file.path("data", "CPTAC_DEGs", "luad_counts_tvalues.csv"))
+download.file("https://zenodo.org/record/7773985/files/ccrcc_counts_tvalues.csv?download=1", file.path("data", "CPTAC_DEGs", "ccrcc_counts_tvalues.csv"))
 
 # Read data in a list of dataframes
 file_names = list.files(path ="data/CPTAC_DEGs", pattern="*.csv", full.names = T)
@@ -25,8 +28,9 @@ res_decoupler_CollecTRI <- lapply(decoupler_inputs, function(x) decouple(as.matr
                                                                          .target='target', args = list(wsum = list(times = 1000)),
                                                                          minsize = 5))
 
-save(res_decoupler_CollecTRI, file = "Use_case/res_decoupler_CollecTRI.RData")
-#load("Use_case/res_decoupler_CollecTRI.RData")
+dir.create(file.path("output", "Use_case"), showWarnings = FALSE)
+save(res_decoupler_CollecTRI, file = "output/Use_case/res_decoupler_CollecTRI.RData")
+#load("output/Use_case/res_decoupler_CollecTRI.RData")
 res_decoupler_CollecTRI_flt <- lapply(res_decoupler_CollecTRI, function(x) x %>% dplyr::filter(statistic == "consensus" & p_value < 0.05 & condition == "NATvsTUM_t"))
 
 res_decoupler_CollecTRI_flt <- Map(cbind, res_decoupler_CollecTRI_flt, Cancer_type = names(res_decoupler_CollecTRI_flt)) %>%
@@ -49,7 +53,7 @@ res_decoupler_df <- res_decoupler_CollecTRI_flt  %>%
   purrr::reduce(rbind) %>%
   select(-Network)
 
-write.table(res_decoupler_df, "res_decoupler_df.csv",sep = ",", row.names = F, quote = F)
+write.table(res_decoupler_df, "output/Use_case/res_decoupler_df.csv",sep = ",", row.names = F, quote = F)
 
 ## Define function for plotting TF activities as a dotplot
 plot_TFs <- function(df) {

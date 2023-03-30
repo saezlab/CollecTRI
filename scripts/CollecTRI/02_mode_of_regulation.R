@@ -15,6 +15,7 @@ resource.file <- "output/aggregated_resources/CollecTRI_resources.csv"
 collecTRI.resources <- read.csv(resource.file)
 
 # load TF classification based on kexwords, GO terms and effector domain information from Soto
+download.file("https://zenodo.org/record/7773985/files/CollecTRI_TFclassification.csv?download=1", file.path("data", "CollecTRI_TFclassification.csv"))
 tf.class <- read.csv("data/CollecTRI_TFclassification.csv", sep = ";") %>%
   dplyr::rename("TF" = TFC2_Associated.Gene.Name,
                 "strict" = STRICT_agreement..GO.UniProt.StructureFunction.)

@@ -14,9 +14,9 @@ library(tidyverse)
 
 ## Load and prepare data ---------------------------
 output.folder <- "output"
-raw.file <- "data/CollecTRI.tsv"
+download.file("https://zenodo.org/record/7773985/files/CollecTRI_source.tsv?download=1", file.path("data", "CollecTRI_source.tsv"))
 
-collecTRI.raw <- read.table(raw.file,
+collecTRI.raw <- read.table(file.path("data", "CollecTRI_source.tsv"),
                             sep = "\t",
                             header = TRUE) # load raw resource list
 
