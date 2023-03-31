@@ -42,7 +42,7 @@ For more information about the CollecTRI-derived regulons, please check out the 
   - [Systematic comparison](https://github.com/saezlab/CollecTRI/blob/main/scripts/benchmark/02_benchmark.ipynb)
   - [Evaluation of binding weights](https://github.com/saezlab/CollecTRI/blob/main/scripts/benchmark/03_benchmark_weights.ipynb)
   - [Statistical evaluation](https://github.com/saezlab/CollecTRI/blob/main/scripts/benchmark/05_statistics.R)
-- [Case study](https://github.com/saezlab/CollecTRI/blob/main/scripts/Case_study/case_study.R)
+- [Case study](https://github.com/saezlab/CollecTRI/blob/main/scripts/casestudy/case_study.R)
 - [Manuscript figures](https://github.com/saezlab/CollecTRI/blob/main/scripts/figures/figures_manuscript.R)
 
 If you are interested in the construction of the CollecTRI meta-resource check
