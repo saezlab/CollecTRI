@@ -10,8 +10,9 @@ an increased coverage of transcription factors and was benchmarked against
 other known GRNs, showing a superior performance in identifying perturbed TFs 
 based on gene expression data using the knockTF data sets.
 
+<p align="center" width="100%">
 <img src="man/figures/overview.png" align="center" width="550">
-
+</p>
 
 ## Data availability 
 The CollecTRI regulons are available through the [OmniPath](https://omnipathdb.org/) or [DoRothEA](https://saezlab.github.io/dorothea/) packages.
