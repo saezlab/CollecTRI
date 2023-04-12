@@ -125,5 +125,5 @@ signed.collecTRI.decision <- assign_sign(aggregated.resources = collecTRI.resour
 
 ## save networks ---------------------------
 dir.create(file.path(output.folder, "CollecTRI"), showWarnings = FALSE)
-readr::write_csv(signed.collecTRI, file.path(output.folder, "CollecTRI", "CollecTRI_sidned.csv"))
+readr::write_csv(signed.collecTRI, file.path(output.folder, "CollecTRI", "CollecTRI_signed.csv"))
 readr::write_csv(signed.collecTRI.decision, file.path(output.folder, "CollecTRI", "CollecTRI_signDecis.csv"))
