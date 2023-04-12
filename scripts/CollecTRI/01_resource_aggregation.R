@@ -140,6 +140,14 @@ resource.table <- resource.table.raw %>%
 # Filter out interactions from non-TFs
 resource.table <- resource.table[!is.na(resource.table$TF.category),]
 
+## Filter edges with complexes as targets ---------------------------
+# the complexes AP1 and NFKB are removed as targets as we can not measure the
+# expression of a complex
+resource.table <- resource.table %>%
+  dplyr::mutate(TG = map_chr(str_split(resource.table$TF.TG, ":"), 2)) %>%
+  dplyr::filter(!TG %in% c("AP1", "NFKB")) %>%
+  dplyr::select(-TG)
+
 ## Save data ---------------------------
 dir.create(file.path(output.folder, "aggregated_resources"), showWarnings = FALSE)
 
