@@ -168,7 +168,8 @@ get_pathwayCommons <- function(path, filterTFs = T){
 
 get_dorothea <- function(path, confs=c('A', 'B', 'C'), filterTFs = T){
   df <- decoupleR::get_dorothea(levels = confs)
-  df <- cbind(df, weight = 1)
+  df <- df %>%
+    dplyr::rename("weight" = mor)
 
   filter_idx <- ""
 
