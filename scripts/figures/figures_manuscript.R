@@ -307,7 +307,7 @@ bench_agnositc_res <- bench_agnositc_res %>%
                       chea3_lit = "ChEA3 Literature",
                       chea3_encode = "ChEA3 ENCODE",
                       rand = "shuffled CollecTRI",
-                      pathComp = "Pathway Commmons"))
+                      pathComp = "Pathway Commons"))
 order_net <- bench_agnositc_res %>%
   filter(method == "consensus_estimate") %>%
   filter(metric == "mcauroc") %>%
@@ -585,7 +585,7 @@ nTF_df <- nTF_df %>%
                       chea_lit = "ChEA3 Literature",
                       chea_encode = "ChEA3 ENCODE",
                       rand = "shuffled CollecTRI",
-                      pathComp = "Pathway Commmons"))
+                      pathComp = "Pathway Commons"))
 
 order_net <- nTF_df %>%
   filter(TF == "all") %>%
