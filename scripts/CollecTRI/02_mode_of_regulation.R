@@ -38,7 +38,7 @@ assign_sign <- function(aggregated.resources,
 
   network.signed$TF <- unlist(lapply(str_split(network.signed$TF.TG, ":"), `[[`, 1))
   network.signed <- network.signed %>%
-    mutate(decision = case_when(
+    mutate(sign.decision = case_when(
     sign != 0 ~ "PMID"
   ))
 
@@ -56,9 +56,9 @@ assign_sign <- function(aggregated.resources,
         ))
 
       network.signed <- network.signed %>%
-        mutate(decision = case_when(
-          decision == "PMID" ~ "PMID",
-          sign != 0 & is.na(decision) ~ "keywords"
+        mutate(sign.decision = case_when(
+          sign.decision == "PMID" ~ "PMID",
+          sign != 0 & is.na(sign.decision) ~ "keywords"
         ))
   }
 
@@ -79,17 +79,17 @@ assign_sign <- function(aggregated.resources,
     network.signed$sign[network.signed$perc_activator > 0.5 & network.signed$sign == 0] <- 1
 
     network.signed <- network.signed %>%
-      mutate(decision = case_when(
-        decision == "PMID" ~ "PMID",
-        decision == "keywords" ~ "keywords",
-        sign != 0 & is.na(decision) ~ "regulon"
+      mutate(sign.decision = case_when(
+        sign.decision == "PMID" ~ "PMID",
+        sign.decision == "keywords" ~ "TF role",
+        sign != 0 & is.na(sign.decision) ~ "regulon"
       ))
 
   }
 
   if (unknown.to.pos){
     network.signed$sign[network.signed$sign == 0] <- 1
-    network.signed$decision[is.na(network.signed$decision)] <- "unknown"
+    network.signed$sign.decision[is.na(network.signed$sign.decision)] <- "default activation"
   }
 
   network.signed <- network.signed %>%
@@ -100,7 +100,7 @@ assign_sign <- function(aggregated.resources,
       dplyr::mutate(source = map_chr(str_split(TF.TG, ":"), 1)) %>%
       dplyr::mutate(target = map_chr(str_split(TF.TG, ":"), 2)) %>%
       dplyr::rename("weight" = sign) %>%
-      dplyr::select(c(source, target, weight, TF.category, resources, PMID, decision))
+      dplyr::select(c(source, target, weight, TF.category, resources, PMID, sign.decision))
   }
 
   if (!save.decision){
@@ -108,7 +108,7 @@ assign_sign <- function(aggregated.resources,
       dplyr::mutate(source = map_chr(str_split(TF.TG, ":"), 1)) %>%
       dplyr::mutate(target = map_chr(str_split(TF.TG, ":"), 2)) %>%
       dplyr::rename("weight" = sign) %>%
-      dplyr::select(c(source, target, weight, TF.category, resources, PMID)) #decision
+      dplyr::select(c(source, target, weight, TF.category, resources, PMID)) #sign.decision
   }
 
 
@@ -118,12 +118,9 @@ assign_sign <- function(aggregated.resources,
 
 ## Construct  networks ---------------------------
 signed.collecTRI <- assign_sign(aggregated.resources = collecTRI.resources,
-                              tf.classification = tf.class)
-signed.collecTRI.decision <- assign_sign(aggregated.resources = collecTRI.resources,
-                                         tf.classification = tf.class,
-                                         save.decision = T)
+                                tf.classification = tf.class,
+                                save.decision = T)
 
 ## save networks ---------------------------
 dir.create(file.path(output.folder, "CollecTRI"), showWarnings = FALSE)
 readr::write_csv(signed.collecTRI, file.path(output.folder, "CollecTRI", "CollecTRI_signed.csv"))
-readr::write_csv(signed.collecTRI.decision, file.path(output.folder, "CollecTRI", "CollecTRI_signDecis.csv"))
