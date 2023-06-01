@@ -23,6 +23,7 @@ tf.class <- read.csv("data/CollecTRI_TFclassification.csv", sep = ";") %>%
 ## Create homogenized table ---------------------------
 assign_sign <- function(aggregated.resources,
                         tf.classification = NULL, #needs to be provided if use.keywords is set to TRUE
+                        use.PMIDs = T,
                         use.classification = T,
                         use.TFregulon = T,
                         unknown.to.pos = T,
@@ -41,6 +42,11 @@ assign_sign <- function(aggregated.resources,
     mutate(sign.decision = case_when(
     sign != 0 ~ "PMID"
   ))
+
+  if(!use.PMIDs){
+    network.signed$sign <- 0
+    network.signed$sign.decision <- NA
+  }
 
   # for unknown interactions use keywords to select sign
   if (use.classification){
@@ -119,8 +125,24 @@ assign_sign <- function(aggregated.resources,
 ## Construct  networks ---------------------------
 signed.collecTRI <- assign_sign(aggregated.resources = collecTRI.resources,
                                 tf.classification = tf.class,
+                                use.PMIDs = T,
+                                use.classification = F,
                                 save.decision = T)
+
+signed.collecTRI_TFrole <- assign_sign(aggregated.resources = collecTRI.resources,
+                                tf.classification = tf.class,
+                                use.PMIDs = F,
+                                use.classification = T,
+                                save.decision = T)
+signed.collecTRI_PMID_TFrole <- assign_sign(aggregated.resources = collecTRI.resources,
+                                            tf.classification = tf.class,
+                                            use.PMIDs = T,
+                                            use.classification = T,
+                                            save.decision = T)
 
 ## save networks ---------------------------
 dir.create(file.path(output.folder, "CollecTRI"), showWarnings = FALSE)
-readr::write_csv(signed.collecTRI, file.path(output.folder, "CollecTRI", "CollecTRI_signed.csv"))
+dir.create(file.path(output.folder, "signed_networks"), showWarnings = FALSE)
+readr::write_csv(signed.collecTRI, file.path(output.folder, "CollecTRI", "CollecTRI.csv"))
+readr::write_csv(signed.collecTRI_TFrole, file.path(output.folder, "signed_networks", "CollecTRI_signed_TFrole.csv"))
+readr::write_csv(signed.collecTRI_PMID_TFrole, file.path(output.folder, "signed_networks", "CollecTRI_signed_PMID_TFrole.csv"))
