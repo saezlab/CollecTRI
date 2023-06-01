@@ -14,7 +14,7 @@ library(tidyverse)
 
 ## Load and prepare data ---------------------------
 output.folder <- "output"
-download.file("https://zenodo.org/record/7773985/files/CollecTRI_source.tsv?download=1", file.path("data", "CollecTRI_source.tsv"))
+#download.file("https://zenodo.org/record/7773985/files/CollecTRI_source.tsv?download=1", file.path("data", "CollecTRI_source.tsv"))
 
 collecTRI.raw <- read.table(file.path("data", "CollecTRI_source.tsv"),
                             sep = "\t",
@@ -24,10 +24,11 @@ collecTRI.raw <- read.table(file.path("data", "CollecTRI_source.tsv"),
 colnames(collecTRI.raw) <- colnames(collecTRI.raw) %>%
   str_replace(pattern = "\\.\\.", replacement = "_") %>%
   str_replace(pattern = "X.", replacement = "") %>%
+  str_replace(pattern = "SIGNOR_Effect", replacement = "SIGNOR_effectType") %>%
+  str_replace(pattern = "Effect", replacement = "Regulation") %>%
   str_replace(pattern = "Sign", replacement = "Regulation") %>%
   str_replace(pattern = "Activation.Repression", replacement = "Regulation") %>%
-  str_replace(pattern = "Mode.of.action", replacement = "Regulation")  %>%
-  str_replace(pattern = "Effect", replacement = "Regulation")
+  str_replace(pattern = "Mode.of.action", replacement = "Regulation")
 
 ## Aggregate resources ---------------------------
 aggregate_resources <- function(collecTRI.raw){
@@ -40,6 +41,7 @@ aggregate_resources <- function(collecTRI.raw){
   # Construction of homogenized table
   homogenized_table <- map_dfr(1:nrow(collecTRI.raw), function(i){
     TF.TG.raw <- collecTRI.raw[i,]
+    TF.TG.raw$TFactS_PMID <- str_replace(TF.TG.raw$TFactS_PMID, ",", ";")
     TF.TG.reg <- TF.TG.raw[, str_detect(colnames(TF.TG.raw), "PMID") |
                              str_detect(colnames(TF.TG.raw), "Regulation")]
 
@@ -71,9 +73,9 @@ aggregate_resources <- function(collecTRI.raw){
       filter(PMID != "")
 
     # Consistent naming for activation, repression, unknown
-    TF.TG.df$Regulation[TF.TG.df$Regulation %in% c("UP", "Activation", "positive", "activation", "+", "Stimulate")] <- "activation"
-    TF.TG.df$Regulation[TF.TG.df$Regulation %in% c("DOWN", "Repression", "negative", "-", "Inhibit")] <- "repression"
-    TF.TG.df$Regulation[TF.TG.df$Regulation %in% c("Unknown", "unknown", "", "not_applicable")] <- "unknown"
+    TF.TG.df$Regulation[TF.TG.df$Regulation %in% c("+", "activation", "Activation", "positive", "Stimulate", "UP")] <- "activation"
+    TF.TG.df$Regulation[TF.TG.df$Regulation %in% c("-", "DOWN", "Inhibit", "negative", "repression", "Repression")] <- "repression"
+    TF.TG.df$Regulation[TF.TG.df$Regulation %in% c("", "?", "+_-", "not_applicable", "unknown", "Unknown")] <- "unknown"
     TF.TG.df$Regulation[is.na(TF.TG.df$Regulation)] <- "unknown"
 
     # Remove duplicated rows (same PMID and same type of regulation)
