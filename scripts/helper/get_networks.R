@@ -179,7 +179,12 @@ get_dorothea <- function(path, confs=c('A', 'B', 'C'), filterTFs = T){
   }
 
   # Write
-  readr::write_csv(df, file.path(path, paste0(filter_idx, 'dorothea_ABC.csv')))
+  if (!any(!confs %in% c("A", "B", "C"))){
+    readr::write_csv(df, file.path(path, paste0(filter_idx, 'dorothea_ABC.csv')))
+  } else if (!any(!confs %in% c("A", "B", "C", "D"))){
+    readr::write_csv(df, file.path(path, paste0(filter_idx, 'dorothea_ABCD.csv')))
+  }
+
 }
 
 
@@ -192,6 +197,7 @@ get_data <- function(path, filterTFs = T){
   get_chea3(path, filterTFs = filterTFs)
   get_pathwayCommons(path, filterTFs = filterTFs)
   get_dorothea(path, filterTFs = filterTFs)
+  get_dorothea(path, confs=c('A', 'B', 'C', 'D'), filterTFs = filterTFs)
 }
 
 # Run
