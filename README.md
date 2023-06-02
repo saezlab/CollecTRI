@@ -15,21 +15,24 @@ based on gene expression data using the knockTF data sets.
 </p>
 
 ## Data availability 
-The CollecTRI regulons are available through the [OmniPath](https://omnipathdb.org/) or [DoRothEA](https://saezlab.github.io/dorothea/) packages.
+The CollecTRI regulons are available in the [DoRothEA](https://saezlab.github.io/dorothea/) and [decoupler](https://saezlab.github.io/decoupleR/) packages through [OmniPath](https://omnipathdb.org/).
 To load the CollecTRI regulons through R or python:
 ```r
-## load collecTRI regulons via Omnipath
-## the complexes AP1 and NFKB are listed with all potential constituents
+# processed regulons
+decoupler::get_collectri(organism='human', split_complexes=FALSE)
 
-OmnipathR::collectri()
+# raw regulons
+OmnipathR::collectri(organism='human', genesymbols=TRUE, loops=TRUE)
 ```
 
-```python
-## load collecTRI regulons via Omnipath
-## the complexes AP1 and NFKB are listed with all potential constituents
+```r
+# processed regulons
+import decoupler as dc
+dc.get_collectri(organism='human', split_complexes=False)
 
-import omnipath
-omnipath.interactions.CollecTRI.get()
+# raw regulons
+import omnipath as op
+op.interactions.CollecTRI.get(genesymbols=True, organism='human', loops=True)
 ```
 
 ## Resources included in CollecTRI
