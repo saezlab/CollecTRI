@@ -37,5 +37,5 @@ compdf.loc[compdf['source'].str.startswith('REL') | compdf['source'].str.startsw
 full_df = pd.concat([intdf, compdf], axis=0)
 full_df['sign_decision'] = full_df['sign_decision'].astype(str)
 full_df.drop_duplicates(inplace=True)
-full_df['sign_decision'] = full_df['sign_decision'].str.replace('default activation;PMID', 'PMID', regex=False) #for NFKB1:DEFB4A due to gene name conversions
+full_df['sign_decision'] = full_df['sign_decision'].str.replace('PMID;default activation', 'PMID', regex=False) #for NFKB1:DEFB4A due to gene name conversions
 pd.DataFrame.to_csv(full_df, "output/CollecTRI/CollecTRI_GRN.csv", index = False)
