@@ -27,6 +27,7 @@ dependencies:
   - r-caret
   - r-rcolorbrewer
   - r-pheatmap
+  - r-seurat
   - python<3.11 #dependencies for benchmark:
   - pandas
   - matplotlib
@@ -36,4 +37,4 @@ dependencies:
   - pycurl
   - pip:
     - decoupler=1.2.0
-    - git+https://github.com/saezlab/pypath@3d28c5f7c8fab1bff9b353a6e4f86bd1cc33738d
+    - git+https://github.com/saezlab/pypath@f6415f79fd5a3b6b6df1afc7447fd15344423654
