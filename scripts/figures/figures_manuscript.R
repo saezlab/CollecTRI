@@ -4,14 +4,9 @@
 #' In this script we will construct the figures for the final manuscript
 
 library(tidyverse)
-library(UpSetR)
 library(ggsignif)
 library(rstatix)
 library(ggpubr)
-if(!require("MLeval")){
-  install.packages('MLeval')
-  library(MLeval)
-}
 library(caret)
 library(RColorBrewer)
 library(pheatmap)
@@ -19,6 +14,7 @@ library(pheatmap)
 ## Load data---------------------------
 ### networks
 doro <- read_csv("data/networks/filtered_dorothea_ABC.csv")
+doro_ABCD <- read_csv("data/networks/filtered_dorothea_ABCD.csv")
 regnet <- read_csv("data/networks/filtered_regnetwork.csv")
 pathComp <- read_csv("data/networks/filtered_pathwayCommons.csv")
 chea <- read_csv("data/networks/filtered_chea3.csv")
@@ -38,6 +34,7 @@ chea_remap <- chea %>%
 collecTRI <- read_csv("output/CollecTRI/CollecTRI_GRN.csv")
 
 networks <- list(doro = doro,
+                 doro_ABCD = doro_ABCD,
                  regnet = regnet,
                  pathComp = pathComp,
                  chea_arch = chea_arch,
@@ -124,6 +121,12 @@ pdf("figures/manuscript/p1.2.2.pdf", width = 2.8, height = 1.5)
 p_1.2.2
 dev.off()
 
+collecTRI$sign_decision %>% table()
+collecTRI$weight %>% table()
+
+nrow(collecTRI)
+length(unique(collecTRI$source))
+
 ### 1.3 coverage compared to other networks
 TFs <- map(networks, function(x){table(x$source) %>% as.data.frame() %>% mutate(Freq = 1)})
 TF_df <- TFs %>% reduce(full_join, by = "Var1")
@@ -142,6 +145,7 @@ tmp_1 <- interactions_df %>% column_to_rownames("interactions") %>%
   add_column(total =  rowSums(interactions_df %>% column_to_rownames("interactions"))) %>%
   mutate(unique = case_when(
     total == 1 & doro == 1 ~ "doro",
+    total == 1 & doro_ABCD == 1 ~ "doro_ABCD",
     total == 1 & regnet == 1 ~ "regnet",
     total == 1 & pathComp == 1 ~ "pathComp",
     total == 1 & chea_arch == 1 ~ "chea_arch",
@@ -171,6 +175,7 @@ plot_df_1 <- data.frame(network = colnames(tmp_1)[1:length(networks)],
                           chea_enrichr = "ChEA3 Enrichr",
                           regnet = "RegNetwork",
                           doro = "DoRothEA ABC",
+                          doro_ABCD = "DoRothEA ABCD",
                           collecTRI = "CollecTRI",
                           chea_remap = "ChEA3 ReMap",
                           chea_lit = "ChEA3 Literature",
@@ -197,6 +202,7 @@ tmp <- TF_df %>% column_to_rownames("source") %>%
   add_column(total =  rowSums(TF_df %>% column_to_rownames("source"))) %>%
   mutate(unique = case_when(
     total == 1 & doro == 1 ~ "doro",
+    total == 1 & doro_ABCD == 1 ~ "doro_ABCD",
     total == 1 & regnet == 1 ~ "regnet",
     total == 1 & chea_arch == 1 ~ "chea_arch",
     total == 1 & chea_encode == 1 ~ "chea_encode",
@@ -226,6 +232,7 @@ plot_df <- data.frame(network = colnames(tmp)[1:length(networks)],
                           chea_enrichr = "ChEA3 Enrichr",
                           regnet = "RegNetwork",
                           doro = "DoRothEA ABC",
+                          doro_ABCD = "DoRothEA ABCD",
                           collecTRI = "CollecTRI",
                           chea_remap = "ChEA3 ReMap",
                           chea_lit = "ChEA3 Literature",
@@ -269,29 +276,12 @@ p_1.3 <- ggplot(plot_df_final, aes(fill=unique, y=count, x=network)) +
   xlab("Networks")
 
 
-pdf("figures/manuscript/p1.3.pdf", width = 2.8, height = 4)
+pdf("figures/manuscript/p1.3.pdf", width = 2.8, height = 3.4)
 p_1.3
 dev.off()
 
 ## Figure 2 systematic comparison ---------------------------
 ### 2.1 Overview benchmark
-# load data and run Caret
-data(Sonar)
-ctrl <- trainControl(method="cv", summaryFunction=twoClassSummary, classProbs=T,
-                     savePredictions = T)
-fit1 <- train(Class ~ .,data=Sonar,method="rf",trControl=ctrl)
-
-# run MLeval
-res <- evalm(list(fit1),gnames=c('rf'))
-
-pdf("figures/manuscript/p2.1.1.pdf", width = 6, height = 3)
-plot(res$roc)
-dev.off()
-
-pdf("figures/manuscript/p2.1.2.pdf", width = 6, height = 3)
-plot(res$prg)
-dev.off()
-
 
 ### 2.2 Benchmark
 bench_agnositc_res <- read_csv("output/benchmark/benchmark_res.csv")
@@ -302,6 +292,7 @@ bench_agnositc_res <- bench_agnositc_res %>%
                       chea3_enrich = "ChEA3 Enrichr",
                       regnet = "RegNetwork",
                       ABC = "DoRothEA ABC",
+                      ABCD = "DoRothEA ABCD",
                       collecTRI = "CollecTRI",
                       chea3_remap = "ChEA3 ReMap",
                       chea3_lit = "ChEA3 Literature",
@@ -309,7 +300,7 @@ bench_agnositc_res <- bench_agnositc_res %>%
                       rand = "shuffled CollecTRI",
                       pathComp = "Pathway Commons"))
 order_net <- bench_agnositc_res %>%
-  filter(method == "consensus_estimate") %>%
+  filter(method == "ulm_estimate") %>%
   filter(metric == "mcauroc") %>%
   group_by(net) %>%
   summarize(mean = median(score)) %>%
@@ -317,12 +308,12 @@ order_net <- bench_agnositc_res %>%
 bench_agnositc_res$net <- factor(bench_agnositc_res$net, levels = rev(order_net$net))
 
 p_2.2.1 <- bench_agnositc_res %>%
-  filter(method == "consensus_estimate") %>%
+  filter(method == "ulm_estimate") %>%
   filter(metric == "mcauroc") %>%
   ggplot(aes(x=net, y=score, fill=net)) +
   geom_boxplot(outlier.size=0.2, lwd=0.2) +
   ylim(0.35, 0.79) +
-  geom_signif(y_position = c(0.77), xmin = c(10), xmax = c(11),
+  geom_signif(y_position = c(0.79), xmin = c(11), xmax = c(12),
               annotation = c("***"), tip_length = 0.02, size = 0.25, textsize = 2.7,
               #significance level taken from statistics.R
               margin_top = 0) +
@@ -334,12 +325,12 @@ p_2.2.1 <- bench_agnositc_res %>%
   xlab("") + coord_flip()
 
 p_2.2.2 <- bench_agnositc_res %>%
-  filter(method == "consensus_estimate") %>%
+  filter(method == "ulm_estimate") %>%
   filter(metric == "mcauprc") %>%
   ggplot(aes(x=net, y=score, fill=net)) +
   geom_boxplot(outlier.size=0.2, lwd=0.2) +
   ylim(0.4, 0.82) +
-  geom_signif(y_position = c(0.81), xmin = c(10), xmax = c(11),
+  geom_signif(y_position = c(0.82), xmin = c(11), xmax = c(12),
               annotation = c("***"), tip_length = 0.02, size = 0.25, textsize = 2.7 ,
               #significance level taken from statistics.R
               margin_top = 0) +
@@ -435,61 +426,183 @@ dev.off()
 
 ## Supp 2 Sign ---------------------------
 # Add information about sign decision
-sign_collecTRI_dec <- read.csv("output/CollecTRI/CollecTRI_signDecis.csv")
-sign_collecTRI_dec <- sign_collecTRI_dec %>%
-  mutate(target = recode(target,
-                         "IFNA1" = "IFNA13",
-                         "NFKB" = "NFKB1",
-                         "CGB3" = "CGB5",
-                         "H3C14" = "H3C15",
-                         "HBA1" = "HBA2",
-                         "DEFB4A" = "DEFB4B",
-                         "C1orf116" = "SARG",
-                         "H4C14" = "H4C9",
-                         "H3C1" = "H3C4",
-                         "ARSE" = "ARSL",
-                         "DEFA1" = "DEFA1B",
-                         "MIR122" = "MIR122a",
-                         "MIMT1" = "TIMM17A",
-                         "CTAG1B" = "CTAG1A",
-                         "C4B" = "C4B_2",
-                         "H3-3B" = "H3-3A",
-                         "DEFB103B" = "DEFB103A",
-                         "H4C8" = "H4C9",
-                         "H3C2" = "H3C4",
-                         "H2AC8" = "H2AC4",
-                         "H2AC11" = "H2AC17",
-                         "H4C13" = "H4C9",
-                         "PRH1" = "PRH2",
-                         "H2BC7" = "H2BC8",
-                         "RPL9" = "RPL9P9",
-                         "SMN2" = "SMN1",
-                         "LGALS7B" = "LGALS7",
-                         "TP53TG3" = "TP53TG3C"))
+bench_sign_collecTRI <- read.csv("output/benchmark/benchmark_sign_res.csv")
+bench_sign_collecTRI_prior <- bench_sign_collecTRI %>%
+  filter(net %in% c("collecTRI_agnostic", "collecTRI_PMID", "collecTRI_TF", "collecTRI_PMID_TF"))
+bench_sign_collecTRI_regulon <- bench_sign_collecTRI %>%
+  filter(net %in% c("collecTRI_PMID", "collecTRI"))
+bench_sign_collecTRI_repression <- bench_sign_collecTRI %>%
+  filter(net %in% c("collecTRI_repression", "collecTRI"))
 
-# transfer miRNA targets to match
-mir_target <- str_detect(collecTRI$target, "miR")
-collecTRI_signs <- collecTRI
-collecTRI_signs$target[mir_target] <- paste0("MIR", map_chr(str_split(collecTRI_signs$target[mir_target], "-"), 3))
+# 2.1 compare prior from PMIDs and TF classificications
+bench_sign_collecTRI_prior <- bench_sign_collecTRI_prior %>%
+  mutate(net = recode(net,
+                      collecTRI_agnostic = "default\nactivation",
+                      collecTRI_PMID = "PMID\ndefault\nactivation",
+                      collecTRI_TF = "TF role\ndefault\nactivation",
+                      collecTRI_PMID_TF = "PMID\nTF role\ndefault\nactivation"))
+bench_sign_collecTRI_prior$net <- factor(bench_sign_collecTRI_prior$net, levels = c("default\nactivation",
+                                                                                    "PMID\ndefault\nactivation",
+                                                                                    "TF role\ndefault\nactivation",
+                                                                                    "PMID\nTF role\ndefault\nactivation"))
 
-# merge with decision information
-sign_collecTRI <- left_join(collecTRI_signs, sign_collecTRI_dec %>% dplyr::select(source, target, decision), by = c("source", "target"), multiple = "all")
+p_S2.1.1 <- bench_sign_collecTRI_prior %>%
+  filter(method == "consensus_estimate") %>%
+  filter(metric == "mcauroc") %>%
+  ggplot(aes(x=net, y=score, fill=net)) +
+  geom_boxplot(outlier.size=0.2, lwd=0.2) +
+  geom_signif(y_position = c(0.775), xmin = c(1), xmax = c(2),
+              annotation = c("***"), tip_length = 0.02, size = 0.25, textsize = 2.7,
+              #significance level taken from statistics.R
+              margin_top = 0) +
+  theme_minimal() +
+  ylim(0.6, 0.785) +
+  theme(legend.position="none",
+        text = element_text(size = 9),
+        axis.text.x = element_text(hjust=0.5)) +
+  ylab("AUROC") +
+  xlab("")
+
+p_S2.1.2 <- bench_sign_collecTRI_prior %>%
+  filter(method == "consensus_estimate") %>%
+  filter(metric == "mcauprc") %>%
+  ggplot(aes(x=net, y=score, fill=net)) +
+  geom_boxplot(outlier.size=0.2, lwd=0.2) +
+  geom_signif(y_position = c(0.81), xmin = c(1), xmax = c(2),
+              annotation = c("***"), tip_length = 0.02, size = 0.25, textsize = 2.7,
+              #significance level taken from statistics.R
+              margin_top = 0) +
+  theme_minimal() +
+  ylim(0.65, 0.815) +
+  theme(legend.position="none",
+        text = element_text(size = 9)) +
+  ylab("AUPRC") +
+  xlab("")
+
+
+pdf("figures/manuscript/pS2.1.1.pdf", width = 3, height = 2)
+p_S2.1.1
+dev.off()
+
+pdf("figures/manuscript/pS2.1.2.pdf", width = 3, height = 2)
+p_S2.1.2
+dev.off()
+
+# 2.2 compare effect of regulon
+bench_sign_collecTRI_regulon <- bench_sign_collecTRI_regulon %>%
+  mutate(net = recode(net,
+                      collecTRI_PMID = "PMID\ndefault\nactivation",
+                      collecTRI = "PMID\nRegulon\ndefault\nactivation"))
+bench_sign_collecTRI_regulon$net <- factor(bench_sign_collecTRI_regulon$net, levels = c("PMID\ndefault\nactivation",
+                                                                                        "PMID\nRegulon\ndefault\nactivation"))
+
+p_S2.2.1 <- bench_sign_collecTRI_regulon %>%
+  filter(method == "consensus_estimate") %>%
+  filter(metric == "mcauroc") %>%
+  ggplot(aes(x=net, y=score, fill=net)) +
+  geom_boxplot(outlier.size=0.2, lwd=0.2) +
+  geom_signif(y_position = c(0.775), xmin = c(1), xmax = c(2),
+              annotation = c("***"), tip_length = 0.02, size = 0.25, textsize = 2.7,
+              #significance level taken from statistics.R
+              margin_top = 0) +
+  theme_minimal() +
+  ylim(0.67, 0.78) +
+  theme(legend.position="none",
+        text = element_text(size = 9)) +
+  ylab("AUROC") +
+  xlab("")
+
+p_S2.2.2 <- bench_sign_collecTRI_regulon %>%
+  filter(method == "consensus_estimate") %>%
+  filter(metric == "mcauprc") %>%
+  ggplot(aes(x=net, y=score, fill=net)) +
+  geom_boxplot(outlier.size=0.2, lwd=0.2) +
+  geom_signif(y_position = c(0.825), xmin = c(1), xmax = c(2),
+              annotation = c("***"), tip_length = 0.02, size = 0.25, textsize = 2.7,
+              #significance level taken from statistics.R
+              margin_top = 0) +
+  theme_minimal() +
+  ylim(0.7, 0.835) +
+  theme(legend.position="none",
+        text = element_text(size = 9)) +
+  ylab("AUPRC") +
+  xlab("")
+
+
+pdf("figures/manuscript/pS2.2.1.pdf", width = 1.8, height = 1.8)
+p_S2.2.1
+dev.off()
+
+pdf("figures/manuscript/pS2.2.2.pdf", width = 1.8, height = 1.8)
+p_S2.2.2
+dev.off()
+
+# 2.3 default activation versus default repression
+bench_sign_collecTRI_repression <- bench_sign_collecTRI_repression %>%
+  mutate(net = recode(net,
+                      collecTRI = "PMID\nRegulon\ndefault\nactivation",
+                      collecTRI_repression = "PMID\nRegulon\ndefault\nrepression"))
+bench_sign_collecTRI_repression$net <- factor(bench_sign_collecTRI_repression$net, levels = c("PMID\nRegulon\ndefault\nactivation",
+                                                                                           "PMID\nRegulon\ndefault\nrepression"))
+
+p_S2.3.1 <- bench_sign_collecTRI_repression %>%
+  filter(method == "consensus_estimate") %>%
+  filter(metric == "mcauroc") %>%
+  ggplot(aes(x=net, y=score, fill=net)) +
+  geom_boxplot(outlier.size=0.2, lwd=0.2) +
+  geom_signif(y_position = c(0.79), xmin = c(1), xmax = c(2),
+              annotation = c("***"), tip_length = 0.02, size = 0.25, textsize = 2.7,
+              #significance level taken from statistics.R
+              margin_top = 0) +
+  theme_minimal() +
+  ylim(0.49, 0.805) +
+  theme(legend.position="none",
+        text = element_text(size = 9)) +
+  ylab("AUROC") +
+  xlab("")
+
+p_S2.3.2 <- bench_sign_collecTRI_repression %>%
+  filter(method == "consensus_estimate") %>%
+  filter(metric == "mcauprc") %>%
+  ggplot(aes(x=net, y=score, fill=net)) +
+  geom_boxplot(outlier.size=0.2, lwd=0.2) +
+  geom_signif(y_position = c(0.85), xmin = c(1), xmax = c(2),
+              annotation = c("***"), tip_length = 0.02, size = 0.25, textsize = 2.7,
+              #significance level taken from statistics.R
+              margin_top = 0) +
+  theme_minimal() +
+  ylim(0.54, 0.87) +
+  theme(legend.position="none",
+        text = element_text(size = 9)) +
+  ylab("AUPRC") +
+  xlab("")
+
+
+pdf("figures/manuscript/pS2.3.1.pdf", width = 1.8, height = 1.8)
+p_S2.3.1
+dev.off()
+
+pdf("figures/manuscript/pS2.3.2.pdf", width = 1.8, height = 1.8)
+p_S2.3.2
+dev.off()
+
+# 2.4 overview final sign assignment
+sign_collecTRI <- read.csv("output/CollecTRI/CollecTRI_GRN.csv")
+sign_collecTRI <- sign_collecTRI %>%
+  mutate(sign_decision = recode(sign_decision,
+                                "default activation" = "default\nactivation"))
 
 decision_df <- sign_collecTRI %>%
-  group_by(decision, weight) %>%
+  group_by(sign_decision, weight) %>%
   summarise(total = n()) %>%
   mutate(weight = recode(weight,
                          "1" = "activation",
                          "-1" = "repression")) %>%
-  mutate(decision = recode(decision,
-                           "keywords" = "TF role",
-                           "regulon" = "Regulon",
-                           "unknown" = "Default activation")) %>%
   arrange(desc(total))
-decision_df <- rbind(decision_df, data.frame(decision = "Default activation", weight = "repression", total = 0))
-decision_df$decision <- factor(decision_df$decision, levels = unique(decision_df$decision))
+decision_df <- rbind(decision_df, data.frame(sign_decision = "default\nactivation", weight = "repression", total = 0))
+decision_df$sign.decision <- factor(decision_df$sign_decision, levels = unique(decision_df$sign_decision))
 
-p_S2.1 <- ggplot(data=decision_df, aes(x=decision, y=total, fill=weight)) +
+p_S2.4 <- ggplot(data=decision_df, aes(x=sign.decision, y=total, fill=weight)) +
   geom_bar(stat="identity", position=position_dodge(width = 0.85), width = 0.8) +
   theme_minimal() +
   scale_fill_manual(values=c('#91B57D','#A55A5B')) +
@@ -501,67 +614,11 @@ p_S2.1 <- ggplot(data=decision_df, aes(x=decision, y=total, fill=weight)) +
   guides(fill=guide_legend(title=""))
 
 decision_df %>%
-  group_by(decision) %>%
+  group_by(sign.decision) %>%
   summarise(all = sum(total))
 
-pdf("figures/manuscript/pS2.1.pdf", width = 4, height = 3.7)
-p_S2.1
-dev.off()
-
-bench_sign_collecTRI <- read.csv("output/benchmark/benchmark_sign_res.csv")
-bench_sign_collecTRI <- bench_sign_collecTRI %>%
-  mutate(net = recode(net,
-                      collecTRI = "CollecTRI signed",
-                      collecTRI_agnostic = "CollecTRI unsigned"))
-order_net <- bench_sign_collecTRI %>%
-  filter(method == "consensus_estimate") %>%
-  filter(metric == "mcauroc") %>%
-  group_by(net) %>%
-  summarize(mean = median(score)) %>%
-  arrange(desc(mean))
-bench_sign_collecTRI$net <- factor(bench_sign_collecTRI$net, levels = rev(order_net$net))
-
-p_S2.2.1 <- bench_sign_collecTRI %>%
-  filter(method == "consensus_estimate") %>%
-  filter(metric == "mcauroc") %>%
-  ggplot(aes(x=net, y=score, fill=net)) +
-  geom_boxplot(outlier.size=0.2, lwd=0.2) +
-  geom_signif(y_position = c(0.75), xmin = c(1), xmax = c(2),
-              annotation = c("***"), tip_length = 0.02, size = 0.25, textsize = 2.7,
-              #significance level taken from statistics.R
-              margin_top = 0) +
-  theme_minimal() +
-  ylim(0.62, 0.76) +
-  theme(legend.position="none",
-        text = element_text(size = 9),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-  ylab("AUROC") +
-  xlab("")
-
-p_S2.2.2 <- bench_sign_collecTRI %>%
-  filter(method == "consensus_estimate") %>%
-  filter(metric == "mcauprc") %>%
-  ggplot(aes(x=net, y=score, fill=net)) +
-  geom_boxplot(outlier.size=0.2, lwd=0.2) +
-  geom_signif(y_position = c(0.8), xmin = c(1), xmax = c(2),
-              annotation = c("***"), tip_length = 0.02, size = 0.25, textsize = 2.7,
-              #significance level taken from statistics.R
-              margin_top = 0) +
-  theme_minimal() +
-  ylim(0.66, 0.81) +
-  theme(legend.position="none",
-        text = element_text(size = 9),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-  ylab("AUPRC") +
-  xlab("")
-
-
-pdf("figures/manuscript/pS2.2.1.pdf", width = 2, height = 2.5)
-p_S2.2.1
-dev.off()
-
-pdf("figures/manuscript/pS2.2.2.pdf", width = 2, height = 2.5)
-p_S2.2.2
+pdf("figures/manuscript/pS2.4.pdf", width = 2.3, height = 2.9)
+p_S2.4
 dev.off()
 
 ## Supp 3 TF with at least five targets ---------------------------
@@ -579,6 +636,7 @@ nTF_df <- nTF_df %>%
                       chea_GTEx = "ChEA3 GTEx",
                       chea_enrich = "ChEA3 Enrichr",
                       regnet = "RegNetwork",
+                      doro_ABCD = "DoRothEA ABCD",
                       doro = "DoRothEA ABC",
                       collecTRI = "CollecTRI",
                       chea_remap = "ChEA3 ReMap",
@@ -704,6 +762,8 @@ labels_plot <- cor_perExp %>%
   pull(mean_cor) %>%
   paste0("mean(r) = ", .)
 names(labels_plot) <- unique(cor_perExp %>% pull(network))
+
+labels_plot
 
 p_S4.2 <- ggplot(cor_perExp ,
                  aes(x = pearson.cor, fill = network) ) +
@@ -855,6 +915,7 @@ pdf("figures/manuscript/pS6.1.pdf", width = 10, height = 10)
 p_S6.1
 dev.off()
 
+range(corr_matrix)
 ### S6.2 Weighting strategy
 bench_weights_res <- read_csv("output/benchmark/benchmark_weights_res.csv")
 bench_weights_res <- bench_weights_res %>%
@@ -871,7 +932,7 @@ order_net <- bench_weights_res %>%
   arrange(desc(mean))
 bench_weights_res$net <- factor(bench_weights_res$net, levels = rev(order_net$net))
 
-t.test(bench_weights_res  %>%
+t_auroc <- t.test(bench_weights_res  %>%
          filter(method == "consensus_estimate") %>%
          filter(metric == "mcauroc") %>%
          filter(net == "CollecTRI") %>%
@@ -879,9 +940,9 @@ t.test(bench_weights_res  %>%
          filter(method == "consensus_estimate") %>%
          filter(metric == "mcauroc") %>%
          filter(net == "weighted CollecTRI") %>%
-         pull(score))
+         pull(score))$p.value
 
-t.test(bench_weights_res  %>%
+t_auprc <- t.test(bench_weights_res  %>%
          filter(method == "consensus_estimate") %>%
          filter(metric == "mcauprc") %>%
          filter(net == "CollecTRI") %>%
@@ -889,7 +950,9 @@ t.test(bench_weights_res  %>%
          filter(method == "consensus_estimate") %>%
          filter(metric == "mcauprc") %>%
          filter(net == "weighted CollecTRI") %>%
-         pull(score))
+         pull(score))$p.value
+
+p.adjust(c(t_auroc, t_auprc), method = "BH")
 
 p_S6.2.1 <- bench_weights_res %>%
   filter(method == "consensus_estimate") %>%
