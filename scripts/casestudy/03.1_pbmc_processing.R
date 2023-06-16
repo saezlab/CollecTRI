@@ -27,6 +27,13 @@ pbmc <- FindClusters(pbmc, resolution = 0.5)
 # 'umap-learn')
 pbmc <- RunUMAP(pbmc, dims = 1:10)
 
+# find markers for every cluster compared to all remaining cells, report only the positive
+# ones
+pbmc.markers <- FindAllMarkers(pbmc, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+pbmc.markers %>%
+  group_by(cluster) %>%
+  slice_max(n = 2, order_by = avg_log2FC)
+
 # Assign clusters
 new.cluster.ids <- c("Naive CD4 T", "CD14+ Mono", "Memory CD4 T", "B", "CD8 T", "FCGR3A+ Mono",
                      "NK", "DC", "Platelet")
