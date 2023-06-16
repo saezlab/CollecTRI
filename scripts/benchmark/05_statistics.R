@@ -135,7 +135,7 @@ auroc.ttest %>%
 auroc.ttest %>%
   filter(comp1 == "shuffled CollecTRI") %>%
   filter(t.value > 0) %>%
-  filter(p.adj < 0.05)
+  filter(p.adj < 0.05) %>%
   pull(t.value) %>%
   mean()
 
@@ -244,12 +244,19 @@ full_source_auprc_mat <- bench_source_res %>%
 ### Perform t.test
 full.source.auroc.ttest <- perform.multi.ttest(full_source_auroc_mat) %>%
   mutate(t.value = round(t.value, digits = 1)) %>%
-  mutate(p.adj = round(p.adj, digits = 2)) %>%
   mutate(net1 = map_chr(str_split(comp1, ":"), 1)) %>%
   mutate(TF1 = map_chr(str_split(comp1, ":"), 2)) %>%
   mutate(net2 = map_chr(str_split(comp2, ":"), 1)) %>%
   mutate(TF2 = map_chr(str_split(comp2, ":"), 2)) %>%
   filter(TF1 == TF2)
+
+full.source.auroc.ttest %>%
+  filter(net1 == "CollecTRI") %>%
+  filter(t.value > 0) %>%
+  filter(p.adj < 0.05) %>%
+  filter(TF1 %in% c("TP53", "FLI1", "NR2F2", "SOX2")) %>%
+  pull(p.adj) %>%
+  range
 
 full.source.auroc.ttest %>%
   filter(net1 == "CollecTRI") %>%
@@ -263,12 +270,19 @@ mean(source_auroc_mat$CollecTRI[rownames(source_auroc_mat) %in% c("TP53", "FLI1"
 
 full.source.auprc.ttest <- perform.multi.ttest(full_source_auprc_mat)%>%
   mutate(t.value = round(t.value, digits = 1)) %>%
-  mutate(p.adj = round(p.adj, digits = 2)) %>%
   mutate(net1 = map_chr(str_split(comp1, ":"), 1)) %>%
   mutate(TF1 = map_chr(str_split(comp1, ":"), 2)) %>%
   mutate(net2 = map_chr(str_split(comp2, ":"), 1)) %>%
   mutate(TF2 = map_chr(str_split(comp2, ":"), 2)) %>%
   filter(TF1 == TF2)
+
+full.source.auprc.ttest %>%
+  filter(net1 == "CollecTRI") %>%
+  filter(t.value > 0) %>%
+  filter(p.adj < 0.05) %>%
+  filter(TF1 %in% c("TP53", "FLI1", "NR2F2", "SOX2")) %>%
+  pull(p.adj) %>%
+  range
 
 full.source.auprc.ttest %>%
   filter(net1 == "CollecTRI") %>%
@@ -351,6 +365,34 @@ auroc.ttest_coverage
 
 
 ## Sign ---------------------------
+tf.class <- read.csv("data/CollecTRI_TFclassification.csv", sep = ";") %>%
+  dplyr::rename("TF" = TFC2_Associated.Gene.Name,
+                "strict" = STRICT_agreement..GO.UniProt.StructureFunction.)
+collectri <- read_csv("output/CollecTRI/CollecTRI_GRN.csv")
+
+pmid_sign <- collectri %>%
+  filter(sign_decision == "PMID") %>%
+  pull(weight) %>%
+  table()
+
+pmid_sign
+pmid_sign["1"]/(pmid_sign["1"] + pmid_sign["-1"])
+
+act <- tf.class %>%
+  filter(strict == "Act") %>%
+  pull(TF)
+
+rep <- tf.class %>%
+  filter(strict == "Repr") %>%
+  pull(TF)
+
+pos <- collectri %>% filter(source %in% act) %>% nrow()
+neg <- collectri %>% filter(source %in% rep) %>% nrow()
+
+c(pos, neg)
+pos/(pos+neg)
+
+## benchmarl sign
 benchmark_sign <- read_csv("output/benchmark/benchmark_sign_res.csv")
 
 auroc_mat_sign <- benchmark_sign %>%
@@ -368,12 +410,16 @@ auprc_mat_sign <- benchmark_sign %>%
   pivot_wider(names_from = net, values_from = score) %>%
   column_to_rownames("counter")
 
-auroc_t <- t.test(auroc_mat_sign$collecTRI, auroc_mat_sign$collecTRI_agnostic)
-auprc_t <- t.test(auprc_mat_sign$collecTRI, auprc_mat_sign$collecTRI_agnostic)
+### Perform t.test
+source.auroc.ttest <- perform.multi.ttest(auroc_mat_sign) %>%
+  mutate(t.value = round(t.value, digits = 1))
 
-p.adjust(c(auroc_t$p.value, auprc_t$p.value), method = "BH")
-auroc_t$statistic
-auprc_t$statistic
+source.auroc.ttest
+
+source.auprc.ttest <- perform.multi.ttest(auprc_mat_sign) %>%
+  mutate(t.value = round(t.value, digits = 1))
+
+source.auprc.ttest
 
 
 ## Size effect ----
