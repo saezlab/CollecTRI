@@ -19,6 +19,8 @@ dependencies:
   - bioconductor-txdb.hsapiens.ucsc.hg38.knowngene #=3.4.6
   - bioconductor-universalmotif
   - bioconductor-decoupler # dependency required for case study
+  - r-seurat # single cell case study:
+  - r-cluster
   - r-upsetr # dependencies required for supplementary figures:
   - r-ggsignif
   - r-rstatix
@@ -27,7 +29,6 @@ dependencies:
   - r-caret
   - r-rcolorbrewer
   - r-pheatmap
-  - r-seurat
   - python<3.11 #dependencies for benchmark:
   - pandas
   - matplotlib
