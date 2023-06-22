@@ -5,6 +5,7 @@ library(decoupleR)
 library(tidyverse)
 library(ggsignif)
 library(ggplot2)
+library(ggpubr)
 
 
 # Load processed pbmc data from decoupler
@@ -69,14 +70,14 @@ DefaultAssay(data = data) <- "TFact"
 markersAct <- FindAllMarkers(data,
                              logfc.threshold = 0.5,
                              test.use = "wilcox",
-                             min.pct = 0.1,
+                             min.pct = 0.15,
                              only.pos = T)
 
 DefaultAssay(data = data) <- "TFexpr"
 markersExpr <- FindAllMarkers(data,
                               logfc.threshold = 0.5,
                               test.use = "wilcox",
-                              min.pct = 0.1,
+                              min.pct = 0.15,
                               only.pos = T)
 
 celltypes <- unique(Idents(data))
@@ -123,6 +124,8 @@ pDiffTFs <- ggplot(diffTFs, aes(fill=type, y=n, x=celltype)) +
   ylab("Total number of differentially\nexpressed or active TFs") +
   xlab("Cell type")
 
+diffTFs %>% group_by(type) %>% summarize(total = sum(n)) %>% pull(total) %>% sum()
+diffTFs %>% group_by(type) %>% summarize(total = sum(n))
 # Features B cells, NK cells ---------------------------------------------------------------------------------
 DefaultAssay(data = data) <- "TFact"
 pPAX5act <- (FeaturePlot(data, features = c("PAX5"), reduction = "umap",pt.size = 0.01) &
@@ -132,8 +135,8 @@ pPAX5act <- (FeaturePlot(data, features = c("PAX5"), reduction = "umap",pt.size 
         text = element_text(size = 9),
         axis.text.x = element_text(size = 7),
         axis.text.y = element_text(size = 7),
-        axis.line = element_line(colour = 'black', size = 0.3),
-        axis.ticks = element_line(colour = "black", size = 0.3),
+        axis.line = element_line(colour = 'black', linewidth = 0.3),
+        axis.ticks = element_line(colour = "black", linewidth = 0.3),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
   xlab("UMAP 1") +
@@ -145,8 +148,8 @@ pPAX5exp <- FeaturePlot(data, features = c("PAX5"), pt.size = 0.01) + ggtitle('P
         text = element_text(size = 9),
         axis.text.x = element_text(size = 7),
         axis.text.y = element_text(size = 7),
-        axis.line = element_line(colour = 'black', size = 0.3),
-        axis.ticks = element_line(colour = "black", size = 0.3),
+        axis.line = element_line(colour = 'black', linewidth = 0.3),
+        axis.ticks = element_line(colour = "black", linewidth = 0.3),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
   xlab("UMAP 1") +
@@ -160,8 +163,8 @@ pEOMESact <- (FeaturePlot(data, features = c("EOMES"), reduction = "umap", pt.si
         text = element_text(size = 9),
         axis.text.x = element_text(size = 7),
         axis.text.y = element_text(size = 7),
-        axis.line = element_line(colour = 'black', size = 0.3),
-        axis.ticks = element_line(colour = "black", size = 0.3),
+        axis.line = element_line(colour = 'black', linewidth = 0.3),
+        axis.ticks = element_line(colour = "black", linewidth = 0.3),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
   xlab("UMAP 1") +
@@ -181,81 +184,118 @@ pEOMESexp <- FeaturePlot(data, features = c("EOMES"), pt.size = 0.01) + ggtitle(
   ylab ("UMAP 2")
 
 # Violin Plots ---------------------------------------------------------------------------------
-vln_df <- data.frame(PAX5 = c(data[["TFact"]]@data["PAX5", names(Idents(data))[Idents(data) == "B cells"]],
-                                   data[["TFexpr"]]@data["PAX5",names(Idents(data))[Idents(data) == "B cells"]]),
-                          TF = rep(c("TF activity", "TF expression"), each = sum(Idents(data) == "B cells")))
+vln_df <- rbind(data.frame(PAX5 = c(data[["TFact"]]@data["PAX5", names(Idents(data))[Idents(data) == "B cells"]],
+                                    data[["TFexpr"]]@data["PAX5",names(Idents(data))[Idents(data) == "B cells"]]),
+                           TF = rep(c("TF activity", "TF expression"), each = sum(Idents(data) == "B cells")),
+                           celltype = "B cells"),
+                data.frame(PAX5 = c(data[["TFact"]]@data["PAX5", names(Idents(data))[!Idents(data) == "B cells"]],
+                                    data[["TFexpr"]]@data["PAX5",names(Idents(data))[!Idents(data) == "B cells"]]),
+                           TF = rep(c("TF activity", "TF expression"), each = sum(!Idents(data) == "B cells")),
+                           celltype = "others"))
 
-sum(vln_df %>% filter(TF == "TF expression") %>% pull(PAX5) != 0)
-vln_df %>% filter(TF == "TF expression") %>% pull(PAX5) %>% length()
+sum(vln_df %>% filter(TF == "TF expression" & celltype == "B cells") %>% pull(PAX5) != 0)
+vln_df %>% filter(TF == "TF expression" & celltype == "B cells") %>% pull(PAX5) %>% length()
 
 # Add noise as done for Seurat violin plot
 PAX5_vln_df <- vln_df
 noise <- rnorm(n = length(x = PAX5_vln_df[, "PAX5"])) / 100000
 PAX5_vln_df$PAX5 <- PAX5_vln_df$PAX5  + noise
 
-PAX5_vln <- ggplot(PAX5_vln_df, aes(x = TF, y = PAX5, fill = TF)) +
+markersAct %>% filter(cluster == "B cells") %>% filter(gene == "PAX5")
+markersExpr %>% filter(cluster == "B cells") %>% filter(gene == "PAX5")
+
+
+PAX5_vln_df
+PAX5_vln <- ggplot(PAX5_vln_df %>%
+                     filter(TF == "TF activity"), aes(x = celltype, y = PAX5, fill = celltype)) +
   geom_violin(adjust = 1,trim=TRUE, scale = "width", linewidth = 0.2) +
-  geom_jitter(size = 0.2, stroke = 0, shape = 16)  +
+  geom_jitter(size = 0, stroke = 0, shape = 16)  +
   theme_minimal() +
   geom_signif(y_position = c(5.5), xmin = c(1), xmax = c(2),
               annotation = c("***"), tip_length = 0.02, size = 0.25, textsize = 2.7,
               margin_top = 0)+
   theme(legend.key.size = unit(0.3, "cm"),
         text = element_text(size = 9),
-        axis.text.x = element_blank(),
-        axis.ticks.x=element_blank(),
+        axis.text.y = element_text(size = 7),
+        axis.line = element_line(colour = 'black', size = 0.3),
+        axis.ticks = element_line(colour = "black", size = 0.3),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
+  ylim(c(-2, 8.1)) +
+  xlab("") +
+  ylab("Activity")
+
+PAX5_vln_2 <- ggplot(PAX5_vln_df %>%
+                     filter(TF == "TF expression"), aes(x = celltype, y = PAX5, fill = celltype)) +
+  geom_violin(adjust = 1,trim=TRUE, scale = "width", linewidth = 0.2) +
+  geom_jitter(size = 0.2, stroke = 0, shape = 16)  +
+  theme_minimal() +
+  theme(legend.key.size = unit(0.3, "cm"),
+        text = element_text(size = 9),
         axis.text.y = element_text(size = 7),
         axis.line = element_line(colour = 'black', size = 0.3),
         axis.ticks = element_line(colour = "black", size = 0.3),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())+
-  ylim(c(-1.5, 6)) +
-  xlab("B cells")
+  xlab("") +
+  ylab("Expression")
 
 # EOMES
-vln_df <- data.frame(EOMES = c(data[["TFact"]]@data["EOMES", names(Idents(data))[Idents(data) == "Natural Killer Cells"]],
-                              data[["TFexpr"]]@data["EOMES",names(Idents(data))[Idents(data) == "Natural Killer Cells"]]),
-                     TF = rep(c("TF activity", "TF expression"), each = sum(Idents(data) == "Natural Killer Cells")))
+vln_df <- rbind(data.frame(EOMES = c(data[["TFact"]]@data["EOMES", names(Idents(data))[Idents(data) == "Natural Killer Cells"]],
+                                    data[["TFexpr"]]@data["EOMES",names(Idents(data))[Idents(data) == "Natural Killer Cells"]]),
+                           TF = rep(c("TF activity", "TF expression"), each = sum(Idents(data) == "Natural Killer Cells")),
+                           celltype = "NK Cells"),
+                data.frame(EOMES = c(data[["TFact"]]@data["EOMES", names(Idents(data))[!Idents(data) == "Natural Killer Cells"]],
+                                    data[["TFexpr"]]@data["EOMES",names(Idents(data))[!Idents(data) == "Natural Killer Cells"]]),
+                           TF = rep(c("TF activity", "TF expression"), each = sum(!Idents(data) == "Natural Killer Cells")),
+                           celltype = "others"))
 
-sum(vln_df %>% filter(TF == "TF expression") %>% pull(EOMES) != 0)
-vln_df %>% filter(TF == "TF expression") %>% pull(EOMES) %>% length()
+sum(vln_df %>% filter(TF == "TF expression" & celltype == "NK Cells") %>% pull(EOMES) != 0)
+vln_df %>% filter(TF == "TF expression" & celltype == "NK Cells") %>% pull(EOMES) %>% length()
 
 # Add noise as done for Seurat violin plot
 EOMES_vln_df <- vln_df
 noise <- rnorm(n = length(x = EOMES_vln_df[, "EOMES"])) / 100000
 EOMES_vln_df$EOMES <- EOMES_vln_df$EOMES  + noise
 
-EOMES_vln <- ggplot(EOMES_vln_df, aes(x = TF, y = EOMES, fill = TF)) +
+markersAct %>% filter(cluster == "Natural Killer Cells") %>% filter(gene == "EOMES")
+markersExpr %>% filter(cluster == "Natural Killer Cells") %>% filter(gene == "EOMES")
+
+
+EOMES_vln_df
+EOMES_vln <- ggplot(EOMES_vln_df %>%
+                     filter(TF == "TF activity"), aes(x = celltype, y = EOMES, fill = celltype)) +
   geom_violin(adjust = 1,trim=TRUE, scale = "width", linewidth = 0.2) +
-  geom_jitter(size = 0.2, stroke = 0, shape = 16) +
+  geom_jitter(size = 0, stroke = 0, shape = 16)  +
+  theme_minimal() +
   geom_signif(y_position = c(7), xmin = c(1), xmax = c(2),
               annotation = c("***"), tip_length = 0.02, size = 0.25, textsize = 2.7,
-              margin_top = 0) +
-  theme_minimal() +
+              margin_top = 0)+
   theme(legend.key.size = unit(0.3, "cm"),
         text = element_text(size = 9),
-        axis.text.x = element_blank(),
-        axis.ticks.x=element_blank(),
         axis.text.y = element_text(size = 7),
         axis.line = element_line(colour = 'black', size = 0.3),
         axis.ticks = element_line(colour = "black", size = 0.3),
         panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank()) +
-  ylim(-1, 7.5) +
-  xlab("Natural Killer Cells")
+        panel.grid.minor = element_blank())+
+  ylim(c(-2, 8.5)) +
+  xlab("") +
+  ylab("Activity")
 
-t.test(EOMES_vln_df %>% filter(TF == "TF activity") %>% pull(EOMES),
-       EOMES_vln_df %>% filter(TF == "TF expression") %>% pull(EOMES))
-t.test(PAX5_vln_df %>% filter(TF == "TF activity") %>% pull(PAX5),
-       PAX5_vln_df %>% filter(TF == "TF expression") %>% pull(PAX5))
-
-p.adjust(c(t.test(EOMES_vln_df %>% filter(TF == "TF activity") %>% pull(EOMES),
-                EOMES_vln_df %>% filter(TF == "TF expression") %>% pull(EOMES))$p.value,
-           t.test(PAX5_vln_df %>% filter(TF == "TF activity") %>% pull(PAX5),
-                PAX5_vln_df %>% filter(TF == "TF expression") %>% pull(PAX5))$p.value), method = "BH")
-
-
-
+EOMES_vln_2 <- ggplot(EOMES_vln_df %>%
+                       filter(TF == "TF expression"), aes(x = celltype, y = EOMES, fill = celltype)) +
+  geom_violin(adjust = 1,trim=TRUE, scale = "width", linewidth = 0.2) +
+  geom_jitter(size = 0.2, stroke = 0, shape = 16)  +
+  theme_minimal() +
+  theme(legend.key.size = unit(0.3, "cm"),
+        text = element_text(size = 9),
+        axis.text.y = element_text(size = 7),
+        axis.line = element_line(colour = 'black', size = 0.3),
+        axis.ticks = element_line(colour = "black", size = 0.3),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())+
+  xlab("") +
+  ylab("Expression")
 
 # Calculate Silhouette score ---------------------------------------------------------------------------------
 # silhouette metric
@@ -321,7 +361,7 @@ DimPlot(data, reduction = "umap", pt.size = 0.01) +
         legend.position = "bottom")
 dev.off()
 
-library(grid)
+
 pdf("figures/manuscript/p4.2.pdf", width = 2.7, height = 3.2)
 pDiffTFs
 dev.off()
@@ -334,14 +374,10 @@ pdf("figures/manuscript/p4.3.2.pdf", width = 1.7, height = 4)
 ggarrange(pPAX5exp + xlab ("") + ylab("") + theme(plot.margin = unit(c(0,0,0,0), "lines")), pEOMESexp + ylab("") + theme(plot.margin = unit(c(0,0,0,0), "lines")), ncol=1, nrow=2, common.legend = TRUE, legend="bottom")
 dev.off()
 
-pdf("figures/manuscript/p4.3.3.pdf", width = 1.4, height = 3.5)
-ggarrange(PAX5_vln, EOMES_vln, common.legend = TRUE, nrow = 2, ncol = 1, legend = "bottom")
+pdf("figures/manuscript/p4.3.3.pdf", width = 1.4, height = 4)
+ggarrange(PAX5_vln, PAX5_vln_2, EOMES_vln, EOMES_vln_2, common.legend = TRUE, heights = c(2, 1.7, 2, 1.7), nrow = 4, ncol = 1, legend = "none")
 dev.off()
 
-pdf("figures/manuscript/p4.3.3_legend.pdf", width = 2, height = 3.7)
-ggarrange(PAX5_vln, EOMES_vln, common.legend = TRUE, nrow = 2, ncol = 1, legend = "bottom")
-dev.off()
-
-pdf("figures/manuscript/p4.4.pdf", width = 1.4, height = 3.4)
+pdf("figures/manuscript/p4.4.pdf", width = 1.2, height = 3.4)
 p
 dev.off()
