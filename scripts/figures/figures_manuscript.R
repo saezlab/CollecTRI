@@ -430,7 +430,7 @@ bench_sign_collecTRI <- read.csv("output/benchmark/benchmark_sign_res.csv")
 bench_sign_collecTRI_prior <- bench_sign_collecTRI %>%
   filter(net %in% c("collecTRI_agnostic", "collecTRI_PMID", "collecTRI_TF", "collecTRI_PMID_TF"))
 bench_sign_collecTRI_regulon <- bench_sign_collecTRI %>%
-  filter(net %in% c("collecTRI_PMID", "collecTRI"))
+  filter(net %in% c("collecTRI_PMID", "collecTRI", "collecTRI_PMID_regulon_TF"))
 bench_sign_collecTRI_repression <- bench_sign_collecTRI %>%
   filter(net %in% c("collecTRI_repression", "collecTRI"))
 
@@ -492,9 +492,11 @@ dev.off()
 bench_sign_collecTRI_regulon <- bench_sign_collecTRI_regulon %>%
   mutate(net = recode(net,
                       collecTRI_PMID = "PMID\ndefault\nactivation",
-                      collecTRI = "PMID\nRegulon\ndefault\nactivation"))
+                      collecTRI = "PMID\nRegulon\ndefault\nactivation",
+                      collecTRI_PMID_regulon_TF = "PMID\nRegulon\nTF role\ndefault\nactivation"))
 bench_sign_collecTRI_regulon$net <- factor(bench_sign_collecTRI_regulon$net, levels = c("PMID\ndefault\nactivation",
-                                                                                        "PMID\nRegulon\ndefault\nactivation"))
+                                                                                        "PMID\nRegulon\ndefault\nactivation",
+                                                                                        "PMID\nRegulon\nTF role\ndefault\nactivation"))
 
 p_S2.2.1 <- bench_sign_collecTRI_regulon %>%
   filter(method == "consensus_estimate") %>%
@@ -506,7 +508,7 @@ p_S2.2.1 <- bench_sign_collecTRI_regulon %>%
               #significance level taken from statistics.R
               margin_top = 0) +
   theme_minimal() +
-  ylim(0.67, 0.78) +
+  ylim(0.67, 0.785) +
   theme(legend.position="none",
         text = element_text(size = 9)) +
   ylab("AUROC") +
@@ -529,11 +531,11 @@ p_S2.2.2 <- bench_sign_collecTRI_regulon %>%
   xlab("")
 
 
-pdf("figures/manuscript/pS2.2.1.pdf", width = 1.8, height = 1.8)
+pdf("figures/manuscript/pS2.2.1.pdf", width = 2, height = 1.9)
 p_S2.2.1
 dev.off()
 
-pdf("figures/manuscript/pS2.2.2.pdf", width = 1.8, height = 1.8)
+pdf("figures/manuscript/pS2.2.2.pdf", width = 2, height = 1.9)
 p_S2.2.2
 dev.off()
 

@@ -27,7 +27,8 @@ assign_sign <- function(aggregated.resources,
                         use.classification = T,
                         use.TFregulon = T,
                         unknown.to.pos = T,
-                        save.decision = F){
+                        save.decision = F,
+                        regulon_end = T){
 
   # select sign based on more number of PMIDs
   network.signed <- aggregated.resources %>%
@@ -48,8 +49,9 @@ assign_sign <- function(aggregated.resources,
     network.signed$sign.decision <- NA
   }
 
-  # for unknown interactions use keywords to select sign
-  if (use.classification){
+  if(regulon_end){ #either run TF classification first and then regulon or other way around
+    # for unknown interactions use keywords to select sign
+    if (use.classification){
       network.signed <- left_join(network.signed, tf.classification %>%
                                     dplyr::select(TF, strict), by = "TF") %>%
         rename("type" = strict)
@@ -66,31 +68,77 @@ assign_sign <- function(aggregated.resources,
           sign.decision == "PMID" ~ "PMID",
           sign != 0 & is.na(sign.decision) ~ "keywords"
         ))
-  }
+    }
 
-  # for other interactions use information from other interaction in regulon to select sign
-  if (use.TFregulon){
-    TF.regulon <- map_dfr(unique(network.signed$TF), function(TF_selected){
-      TF.interactions <- network.signed %>% filter(TF == TF_selected)
-      data.frame(TF = TF_selected,
-                 perc_repressor = sum(TF.interactions$sign == -1)/nrow(TF.interactions),
-                 perc_activator = sum(TF.interactions$sign == 1)/nrow(TF.interactions),
-                 perc_unknown = sum(TF.interactions$sign == 0)/nrow(TF.interactions))
+    # for other interactions use information from other interaction in regulon to select sign
+    if (use.TFregulon){
+      TF.regulon <- map_dfr(unique(network.signed$TF), function(TF_selected){
+        TF.interactions <- network.signed %>% filter(TF == TF_selected)
+        data.frame(TF = TF_selected,
+                   perc_repressor = sum(TF.interactions$sign == -1)/nrow(TF.interactions),
+                   perc_activator = sum(TF.interactions$sign == 1)/nrow(TF.interactions),
+                   perc_unknown = sum(TF.interactions$sign == 0)/nrow(TF.interactions))
 
-    })
+      })
 
-    network.signed <- left_join(network.signed, TF.regulon, by = "TF")
+      network.signed <- left_join(network.signed, TF.regulon, by = "TF")
 
-    network.signed$sign[network.signed$perc_repressor > 0.5 & network.signed$sign == 0] <- -1
-    network.signed$sign[network.signed$perc_activator > 0.5 & network.signed$sign == 0] <- 1
+      network.signed$sign[network.signed$perc_repressor > 0.5 & network.signed$sign == 0] <- -1
+      network.signed$sign[network.signed$perc_activator > 0.5 & network.signed$sign == 0] <- 1
 
-    network.signed <- network.signed %>%
-      mutate(sign.decision = case_when(
-        sign.decision == "PMID" ~ "PMID",
-        sign.decision == "keywords" ~ "TF role",
-        sign != 0 & is.na(sign.decision) ~ "regulon"
-      ))
+      network.signed <- network.signed %>%
+        mutate(sign.decision = case_when(
+          sign.decision == "PMID" ~ "PMID",
+          sign.decision == "keywords" ~ "TF role",
+          sign != 0 & is.na(sign.decision) ~ "regulon"
+        ))
 
+    }
+  } else {
+    # for other interactions use information from other interaction in regulon to select sign
+    if (use.TFregulon){
+      TF.regulon <- map_dfr(unique(network.signed$TF), function(TF_selected){
+        TF.interactions <- network.signed %>% filter(TF == TF_selected)
+        data.frame(TF = TF_selected,
+                   perc_repressor = sum(TF.interactions$sign == -1)/nrow(TF.interactions),
+                   perc_activator = sum(TF.interactions$sign == 1)/nrow(TF.interactions),
+                   perc_unknown = sum(TF.interactions$sign == 0)/nrow(TF.interactions))
+
+      })
+
+      network.signed <- left_join(network.signed, TF.regulon, by = "TF")
+
+      network.signed$sign[network.signed$perc_repressor > 0.5 & network.signed$sign == 0] <- -1
+      network.signed$sign[network.signed$perc_activator > 0.5 & network.signed$sign == 0] <- 1
+
+      network.signed <- network.signed %>%
+        mutate(sign.decision = case_when(
+          sign.decision == "PMID" ~ "PMID",
+          sign != 0 & is.na(sign.decision) ~ "regulon"
+        ))
+
+    }
+
+    # for unknown interactions use keywords to select sign
+    if (use.classification){
+      network.signed <- left_join(network.signed, tf.classification %>%
+                                    dplyr::select(TF, strict), by = "TF") %>%
+        rename("type" = strict)
+
+      network.signed[network.signed$sign == 0,] <- network.signed[network.signed$sign == 0,] %>%
+        mutate(sign = case_when(
+          type == "Act" ~ 1,
+          type == "Repr" ~ -1,
+          is.na(type) | type == "" ~ 0
+        ))
+
+      network.signed <- network.signed %>%
+        mutate(sign.decision = case_when(
+          sign.decision == "PMID" ~ "PMID",
+          sign.decision == "regulon" ~ "regulon",
+          sign != 0 & is.na(sign.decision) ~ "keywords"
+        ))
+    }
   }
 
   if (unknown.to.pos){
@@ -139,6 +187,12 @@ signed.collecTRI_PMID_TFrole <- assign_sign(aggregated.resources = collecTRI.res
                                             use.PMIDs = T,
                                             use.classification = T,
                                             save.decision = T)
+signed.collecTRI_PMID_regulon_TFrole <- assign_sign(aggregated.resources = collecTRI.resources,
+                                                    tf.classification = tf.class,
+                                                    use.PMIDs = T,
+                                                    use.classification = T,
+                                                    save.decision = T,
+                                                    regulon_end = F)
 
 ## save networks ---------------------------
 dir.create(file.path(output.folder, "CollecTRI"), showWarnings = FALSE)
@@ -146,3 +200,4 @@ dir.create(file.path(output.folder, "signed_networks"), showWarnings = FALSE)
 readr::write_csv(signed.collecTRI, file.path(output.folder, "CollecTRI", "CollecTRI.csv"))
 readr::write_csv(signed.collecTRI_TFrole, file.path(output.folder, "signed_networks", "CollecTRI_signed_TFrole.csv"))
 readr::write_csv(signed.collecTRI_PMID_TFrole, file.path(output.folder, "signed_networks", "CollecTRI_signed_PMID_TFrole.csv"))
+readr::write_csv(signed.collecTRI_PMID_regulon_TFrole, file.path(output.folder, "signed_networks", "CollecTRI_signed_PMID_regulon_TFrole.csv"))
