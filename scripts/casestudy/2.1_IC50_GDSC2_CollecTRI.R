@@ -41,7 +41,7 @@ model_inp_t <- model_inp %>%
   split(~split_ID)
 
 # Remove those TFs with an activity in less than 20% of the cell lines
-model_inp_flt <- model_inp_t[sapply(model_inp_t, nrow)>200]
+model_inp_flt <- model_inp_t[sapply(model_inp_t, nrow)> 0.2 * nrow(GDSC2_cell_lines)]
 
 #model_inp[is.na(model_inp)] <- 0
 
