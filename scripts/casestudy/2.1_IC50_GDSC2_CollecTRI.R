@@ -93,7 +93,7 @@ anova_adj_005 <- lapply(anova_adj, function(x) x %>% filter(Factor == "Activity"
 anova_adj_005 <- anova_adj_005[sapply(anova_adj_005, nrow)>0]
 save(anova_adj_005, file = "IC50_anova_005_GDSC2_CollecTRI.RData")
 
-load("IC50_anova_005_GDSC2_CollecTRI.RData")
+load("IC50_anova_GDSC2_CollecTRI.RData")
 load("IC50_models_GDSC2_CollecTRI.RData")
 # Merge model coefficients and Anova p-vals
 merge_dataframes <- function(list1, list2) {
@@ -111,12 +111,11 @@ models_coeff <- lapply(models_GDSC2_CollecTRI, function(x) (x$effects) %>% stack
 
 models_coeff <- Map(cbind, models_coeff, Combo = names(models_coeff))
 
-res_all <- merge_dataframes(anova_adj_005, models_coeff)
-res_all <- res_all %>%
-  purrr::reduce(rbind)
+res_all_GDSC2_CollecTRI <- merge_dataframes(anova_adj, models_coeff)
+res_all_GDSC2_CollecTRI <- res_all_GDSC2_CollecTRI %>%
+  purrr::reduce(rbind) %>% filter(Factor == "Activity")
 
-res_all_GDSC2_CollecTRI <- res_all
-save(res_all_GDSC2_CollecTRI, file ="IC50_GDSC2_CollecTRI_resAll.RData")
+save(res_all_GDSC2_CollecTRI, file ="IC50_GDSC2_CollecTRI_resAll_unflt.RData")
 
 res_all_flt <- res_all %>%
   separate(Combo, c("DrugA","TF"), remove = F, sep = "_")
