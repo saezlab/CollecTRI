@@ -424,87 +424,6 @@ pdf("figures/manuscript/pS1.pdf", width = 6, height = 5)
 p_S1
 dev.off()
 
-## Supp new -------------
-TFs <- map(networks, function(net) unique(net$source)) %>%
-  unlist() %>%
-  unique()
-
-jaccard_df <- map_dfr(TFs, function(TF){
-  regulons <- map(networks, function(net){
-      net %>%
-        filter(source == TF) %>%
-        mutate(edge = paste(source, target, sep = ":")) %>%
-        pull(edge)
-    })
-
-  dist <- unlist(lapply(combn(regulons, 2, simplify = FALSE), function(x) {
-    length(intersect(x[[1]], x[[2]]))/length(union(x[[1]], x[[2]])) }))
-
-  jaccard_df_full <- cbind(t(combn(names(regulons),2)), dist) %>% as.data.frame()
-
-  jaccard_df_full$dist <- as.numeric(jaccard_df_full$dist)
-  jaccard_df_full$TF <- TF
-
-  jaccard_df_full
-})
-
-mean_jaccard <- jaccard_df %>%
-  group_by(V1, V2) %>%
-  summarise(mean_jaccard = mean(dist, na.rm = T))
-
-ord <- table(mean_jaccard$V1) %>%
-  as.data.frame() %>%
-  arrange(desc(Freq)) %>%
-  pull(Var1)
-
-ord2 <- table(mean_jaccard$V2) %>%
-  as.data.frame() %>%
-  arrange(desc(Freq)) %>%
-  pull(Var1)
-mean_jaccard$V1 <- factor( mean_jaccard$V1 , levels = ord)
-mean_jaccard$V2 <- factor( mean_jaccard$V2 , levels = ord2)
-
-mean_jaccard <- mean_jaccard %>%
-  mutate(V1 = recode(V1,
-                      chea_arch = "ChEA3 ARCHS4",
-                      chea_GTEx = "ChEA3 GTEx",
-                      chea_enrichr = "ChEA3 Enrichr",
-                      regnet = "RegNetwork",
-                      doro = "DoRothEA ABC",
-                      doro_ABCD = "DoRothEA ABCD",
-                      collecTRI = "CollecTRI",
-                      chea_remap = "ChEA3 ReMap",
-                      chea_lit = "ChEA3 Literature",
-                      chea_encode = "ChEA3 ENCODE",
-                      pathComp = "Pathway Commons")) %>%
-  mutate(V2 = recode(V2,
-                     chea_arch = "ChEA3 ARCHS4",
-                     chea_GTEx = "ChEA3 GTEx",
-                     chea_enrichr = "ChEA3 Enrichr",
-                     regnet = "RegNetwork",
-                     doro = "DoRothEA ABC",
-                     doro_ABCD = "DoRothEA ABCD",
-                     collecTRI = "CollecTRI",
-                     chea_remap = "ChEA3 ReMap",
-                     chea_lit = "ChEA3 Literature",
-                     chea_encode = "ChEA3 ENCODE",
-                     pathComp = "Pathway Commons"))
-
-pS2_new <- ggplot(mean_jaccard, aes(V1, V2, fill= mean_jaccard)) +
-  geom_tile() +
-  scale_fill_distiller(palette = "Blues", name = "Mean Jaccard") +
-  theme_minimal() +
-  theme(panel.grid.major = element_blank(),
-        text = element_text(size = 9),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-  ylab("") +
-  xlab("")
-
-pdf("figures/manuscript/pS2_jaccard.pdf", width = 6, height = 5)
-pS2_new
-dev.off()
-
-
 ## Supp 2 Sign ---------------------------
 # Add information about sign decision
 bench_sign_collecTRI <- read.csv("output/benchmark/benchmark_sign_res.csv")
@@ -704,7 +623,88 @@ pdf("figures/manuscript/pS2.4.pdf", width = 2.3, height = 2.9)
 p_S2.4
 dev.off()
 
-## Supp 3 TF with at least five targets ---------------------------
+## Supp 3 Jaccard -------------
+TFs <- map(networks, function(net) unique(net$source)) %>%
+  unlist() %>%
+  unique()
+
+jaccard_df <- map_dfr(TFs, function(TF){
+  regulons <- map(networks, function(net){
+    net %>%
+      filter(source == TF) %>%
+      mutate(edge = paste(source, target, sep = ":")) %>%
+      pull(edge)
+  })
+
+  dist <- unlist(lapply(combn(regulons, 2, simplify = FALSE), function(x) {
+    length(intersect(x[[1]], x[[2]]))/length(union(x[[1]], x[[2]])) }))
+
+  jaccard_df_full <- cbind(t(combn(names(regulons),2)), dist) %>% as.data.frame()
+
+  jaccard_df_full$dist <- as.numeric(jaccard_df_full$dist)
+  jaccard_df_full$TF <- TF
+
+  jaccard_df_full
+})
+
+mean_jaccard <- jaccard_df %>%
+  group_by(V1, V2) %>%
+  summarise(mean_jaccard = mean(dist, na.rm = T))
+
+ord <- table(mean_jaccard$V1) %>%
+  as.data.frame() %>%
+  arrange(desc(Freq)) %>%
+  pull(Var1)
+
+ord2 <- table(mean_jaccard$V2) %>%
+  as.data.frame() %>%
+  arrange(desc(Freq)) %>%
+  pull(Var1)
+mean_jaccard$V1 <- factor( mean_jaccard$V1 , levels = ord)
+mean_jaccard$V2 <- factor( mean_jaccard$V2 , levels = ord2)
+
+mean_jaccard <- mean_jaccard %>%
+  mutate(V1 = recode(V1,
+                     chea_arch = "ChEA3 ARCHS4",
+                     chea_GTEx = "ChEA3 GTEx",
+                     chea_enrichr = "ChEA3 Enrichr",
+                     regnet = "RegNetwork",
+                     doro = "DoRothEA ABC",
+                     doro_ABCD = "DoRothEA ABCD",
+                     collecTRI = "CollecTRI",
+                     chea_remap = "ChEA3 ReMap",
+                     chea_lit = "ChEA3 Literature",
+                     chea_encode = "ChEA3 ENCODE",
+                     pathComp = "Pathway Commons")) %>%
+  mutate(V2 = recode(V2,
+                     chea_arch = "ChEA3 ARCHS4",
+                     chea_GTEx = "ChEA3 GTEx",
+                     chea_enrichr = "ChEA3 Enrichr",
+                     regnet = "RegNetwork",
+                     doro = "DoRothEA ABC",
+                     doro_ABCD = "DoRothEA ABCD",
+                     collecTRI = "CollecTRI",
+                     chea_remap = "ChEA3 ReMap",
+                     chea_lit = "ChEA3 Literature",
+                     chea_encode = "ChEA3 ENCODE",
+                     pathComp = "Pathway Commons"))
+
+pS3_new <- ggplot(mean_jaccard, aes(V1, V2, fill= mean_jaccard)) +
+  geom_tile() +
+  scale_fill_distiller(palette = "Blues", direction = 1, name = "Mean Jaccard") +
+  theme_minimal() +
+  theme(panel.grid.major = element_blank(),
+        text = element_text(size = 9),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ylab("") +
+  xlab("")
+
+pdf("figures/manuscript/pS3_jaccard.pdf", width = 6, height = 5)
+pS3_new
+dev.off()
+
+
+## Supp 4 TF with at least five targets ---------------------------
 nTF_df <- map_dfr(names(networks), function(net_i){
   net <- networks[[net_i]]
 
@@ -752,7 +752,7 @@ pdf("figures/manuscript/pS3.pdf", width = 6, height = 3.4)
 p_S3
 dev.off()
 
-## Supp 4 Bias ---------------------------
+## Supp 5 Bias ---------------------------
 ### S4.1 Size difference between TFs in benchmark and background
 TFs_bench <- obs_filtered$TF %>% unique()
 
@@ -864,7 +864,7 @@ pdf("figures/manuscript/pS4.2.pdf", width = 6, height = 2.7)
 p_S4.2
 dev.off()
 
-## Supp 5 Benchmark per source ---------------------------
+## Supp 6 Benchmark per source ---------------------------
 bench_signed_source_res <- read_csv("output/benchmark/benchmark_source_res.csv")
 bench_signed_source_res <- bench_signed_source_res %>%
   mutate(net = recode(net,
@@ -958,7 +958,7 @@ p_S5.2.2
 dev.off()
 
 
-## Supp 6 weights ---------------------------
+## Supp 7 weights ---------------------------
 ### S6.1 Correlation between weighting strategy
 corr_matrix <- read_csv("output/weighted_networks/correlation_matrix.csv")%>%
   as.data.frame()
