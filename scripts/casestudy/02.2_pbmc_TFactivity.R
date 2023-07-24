@@ -82,6 +82,9 @@ markersExpr <- FindAllMarkers(data,
 
 celltypes <- unique(Idents(data))
 
+write_csv(markersExpr, "output/case_study/single_cell/SuppFile3_TF_expression_markers.csv")
+write_csv(markersAct, "output/case_study/single_cell/SuppFile4_TF_activity_markers.csv")
+
 markEx <- markersExpr %>% mutate(id = paste(gene, cluster, sep = "_")) %>% pull(id)
 markAc <- markersAct %>% mutate(id = paste(gene, cluster, sep = "_")) %>% pull(id)
 
