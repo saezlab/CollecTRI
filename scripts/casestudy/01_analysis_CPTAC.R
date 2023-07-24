@@ -52,7 +52,7 @@ res_decoupler_df <- res_decoupler_CollecTRI_flt  %>%
   purrr::reduce(rbind) %>%
   select(-Network)
 
-write.table(res_decoupler_df, "output/case_study/cptac/SuppFile2_decoupleR_result.csv",sep = ",", row.names = F, quote = F)
+write.table(res_decoupler_df, "output/case_study/cptac/SuppFile2_TFactivities_cptac.csv",sep = ",", row.names = F, quote = F)
 
 ## Define function for plotting TF activities as a dotplot
 plot_TFs <- function(df) {
