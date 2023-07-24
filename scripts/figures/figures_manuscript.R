@@ -424,6 +424,87 @@ pdf("figures/manuscript/pS1.pdf", width = 6, height = 5)
 p_S1
 dev.off()
 
+## Supp new -------------
+TFs <- map(networks, function(net) unique(net$source)) %>%
+  unlist() %>%
+  unique()
+
+jaccard_df <- map_dfr(TFs, function(TF){
+  regulons <- map(networks, function(net){
+      net %>%
+        filter(source == TF) %>%
+        mutate(edge = paste(source, target, sep = ":")) %>%
+        pull(edge)
+    })
+
+  dist <- unlist(lapply(combn(regulons, 2, simplify = FALSE), function(x) {
+    length(intersect(x[[1]], x[[2]]))/length(union(x[[1]], x[[2]])) }))
+
+  jaccard_df_full <- cbind(t(combn(names(regulons),2)), dist) %>% as.data.frame()
+
+  jaccard_df_full$dist <- as.numeric(jaccard_df_full$dist)
+  jaccard_df_full$TF <- TF
+
+  jaccard_df_full
+})
+
+mean_jaccard <- jaccard_df %>%
+  group_by(V1, V2) %>%
+  summarise(mean_jaccard = mean(dist, na.rm = T))
+
+ord <- table(mean_jaccard$V1) %>%
+  as.data.frame() %>%
+  arrange(desc(Freq)) %>%
+  pull(Var1)
+
+ord2 <- table(mean_jaccard$V2) %>%
+  as.data.frame() %>%
+  arrange(desc(Freq)) %>%
+  pull(Var1)
+mean_jaccard$V1 <- factor( mean_jaccard$V1 , levels = ord)
+mean_jaccard$V2 <- factor( mean_jaccard$V2 , levels = ord2)
+
+mean_jaccard <- mean_jaccard %>%
+  mutate(V1 = recode(V1,
+                      chea_arch = "ChEA3 ARCHS4",
+                      chea_GTEx = "ChEA3 GTEx",
+                      chea_enrichr = "ChEA3 Enrichr",
+                      regnet = "RegNetwork",
+                      doro = "DoRothEA ABC",
+                      doro_ABCD = "DoRothEA ABCD",
+                      collecTRI = "CollecTRI",
+                      chea_remap = "ChEA3 ReMap",
+                      chea_lit = "ChEA3 Literature",
+                      chea_encode = "ChEA3 ENCODE",
+                      pathComp = "Pathway Commons")) %>%
+  mutate(V2 = recode(V2,
+                     chea_arch = "ChEA3 ARCHS4",
+                     chea_GTEx = "ChEA3 GTEx",
+                     chea_enrichr = "ChEA3 Enrichr",
+                     regnet = "RegNetwork",
+                     doro = "DoRothEA ABC",
+                     doro_ABCD = "DoRothEA ABCD",
+                     collecTRI = "CollecTRI",
+                     chea_remap = "ChEA3 ReMap",
+                     chea_lit = "ChEA3 Literature",
+                     chea_encode = "ChEA3 ENCODE",
+                     pathComp = "Pathway Commons"))
+
+pS2_new <- ggplot(mean_jaccard, aes(V1, V2, fill= mean_jaccard)) +
+  geom_tile() +
+  scale_fill_distiller(palette = "Blues", name = "Mean Jaccard") +
+  theme_minimal() +
+  theme(panel.grid.major = element_blank(),
+        text = element_text(size = 9),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ylab("") +
+  xlab("")
+
+pdf("figures/manuscript/pS2_jaccard.pdf", width = 6, height = 5)
+pS2_new
+dev.off()
+
+
 ## Supp 2 Sign ---------------------------
 # Add information about sign decision
 bench_sign_collecTRI <- read.csv("output/benchmark/benchmark_sign_res.csv")
