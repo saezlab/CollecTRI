@@ -24,14 +24,13 @@ file_list = setNames(file_list, gsub("data/CPTAC_DEGs/|.csv|_counts_tvalues","",
 decoupler_inputs <- lapply(file_list, function(x) as.data.frame(x) %>%
                              set_rownames(.$ID) %>% dplyr::select(NATvsTUM_t) %>% filter(!is.na(NATvsTUM_t)))
 
-res_decoupler_CollecTRI <- lapply(decoupler_inputs, function(x) decouple(as.matrix(x),network = CollecTRI,.source='source',
-                                                                         .target='target', args = list(wsum = list(times = 1000)),
-                                                                         minsize = 5))
+res_decoupler_CollecTRI <- lapply(decoupler_inputs, function(x) run_ulm(as.matrix(x),network = CollecTRI,.source='source',
+                                                                         .target='target', minsize = 5))
 
-dir.create(file.path("output", "Use_case"), showWarnings = FALSE)
-save(res_decoupler_CollecTRI, file = "output/Use_case/res_decoupler_CollecTRI.RData")
-#load("output/Use_case/res_decoupler_CollecTRI.RData")
-res_decoupler_CollecTRI_flt <- lapply(res_decoupler_CollecTRI, function(x) x %>% dplyr::filter(statistic == "consensus" & p_value < 0.05 & condition == "NATvsTUM_t"))
+dir.create(file.path("output", "case_study", "cptac"), showWarnings = FALSE)
+save(res_decoupler_CollecTRI, file = "output/case_study/cptac/res_decoupler_CollecTRI.RData")
+#load("output/case_study/cptac/res_decoupler_CollecTRI.RData")
+res_decoupler_CollecTRI_flt <- lapply(res_decoupler_CollecTRI, function(x) x %>% dplyr::filter(statistic == "ulm" & p_value < 0.05 & condition == "NATvsTUM_t"))
 
 res_decoupler_CollecTRI_flt <- Map(cbind, res_decoupler_CollecTRI_flt, Cancer_type = names(res_decoupler_CollecTRI_flt)) %>%
   purrr::reduce(rbind) %>%
@@ -53,7 +52,7 @@ res_decoupler_df <- res_decoupler_CollecTRI_flt  %>%
   purrr::reduce(rbind) %>%
   select(-Network)
 
-write.table(res_decoupler_df, "output/Use_case/res_decoupler_df.csv",sep = ",", row.names = F, quote = F)
+write.table(res_decoupler_df, "output/case_study/cptac/SuppFile2_decoupleR_result.csv",sep = ",", row.names = F, quote = F)
 
 ## Define function for plotting TF activities as a dotplot
 plot_TFs <- function(df) {
