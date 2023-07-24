@@ -18,6 +18,7 @@ bench_agnositc_res <- read_csv("output/benchmark/benchmark_res.csv")  %>%
                        chea3_enrich = "ChEA3 Enrichr",
                        regnet = "RegNetwork",
                        ABC = "DoRothEA ABC",
+                       ABCD = "DoRothEA ABCD",
                        collecTRI = "CollecTRI",
                        chea3_remap = "ChEA3 ReMap",
                        chea3_lit = "ChEA3 Literature",
@@ -171,13 +172,24 @@ auprc.ttest %>%
   mean()
 
 # Merge AUROC and AUPRC results into one table
-statistics_bench <- full_join(auroc.ttest, auprc.ttest, by = c("comp1", "comp2"))
+auprc.ttest_merge <- auprc.ttest %>%
+  mutate(comp = paste(comp1, comp2, sep = ":")) %>%
+  mutate(comp1_new = case_when(
+    comp %in% (auroc.ttest %>% mutate(comp= paste(comp1, comp2, sep = ":")) %>% pull(comp)) ~ comp1,
+    !comp %in% (auroc.ttest %>% mutate(comp= paste(comp1, comp2, sep = ":")) %>% pull(comp)) ~ comp2))  %>%
+  mutate(comp2_new = case_when(
+    comp %in% (auroc.ttest %>% mutate(comp= paste(comp1, comp2, sep = ":")) %>% pull(comp))  ~ comp2,
+    !comp %in% (auroc.ttest %>% mutate(comp= paste(comp1, comp2, sep = ":")) %>% pull(comp)) ~ comp1))  %>%
+  select(comp1_new, comp2_new, p.adj, t.value) %>%
+  rename("comp1" = comp1_new, "comp2" = comp2_new)
+
+statistics_bench <- full_join(auroc.ttest, auprc.ttest_merge, by = c("comp1", "comp2"))
 colnames(statistics_bench) <- c("GRN 1", "GRN 2", "AUROC adjusted p value", "AUROC t value", "AUPRC adjusted p value", "AUPRC t value")
 #as Wolfgang Huber recommended we report that the values are below detection limit (https://www.sciencedirect.com/science/article/pii/S2405471219300717?via%3Dihub)
 statistics_bench$`AUROC adjusted p value`[statistics_bench$`AUROC adjusted p value` == 0] <- "<2.2x10^-16"
 statistics_bench$`AUPRC adjusted p value`[statistics_bench$`AUPRC adjusted p value` == 0] <- "<2.2x10^-16"
 
-write_csv(statistics_bench, "output/benchmark/benchmark_ttest.csv")
+write_csv(statistics_bench, "output/benchmark/SuppFile1_benchmark_ttest.csv")
 
 
 ## Comparison of source benchmark results---------------------------
