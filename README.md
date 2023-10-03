@@ -22,7 +22,7 @@ To load the CollecTRI regulons through R or python:
 decoupler::get_collectri(organism='human', split_complexes=FALSE)
 
 # raw regulons
-OmnipathR::collectri(organism='human', genesymbols=TRUE, loops=TRUE)
+OmnipathR::collectri(organism=9606L, genesymbols=TRUE, loops=TRUE)
 ```
 
 ```r
@@ -32,7 +32,7 @@ dc.get_collectri(organism='human', split_complexes=False)
 
 # raw regulons
 import omnipath as op
-op.interactions.CollecTRI.get(genesymbols=True, organism='human', loops=True)
+op.interactions.CollecTRI.get(genesymbols=True, organism=9606L, loops=True)
 ```
 
 ## Resources included in CollecTRI
