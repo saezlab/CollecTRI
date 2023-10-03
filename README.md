@@ -19,13 +19,13 @@ The CollecTRI regulons are available in the [DoRothEA](https://saezlab.github.io
 To load the CollecTRI regulons through R or python:
 ```r
 # processed regulons
-decoupler::get_collectri(organism='human', split_complexes=FALSE)
+decoupleR::get_collectri(organism='human', split_complexes=FALSE)
 
 # raw regulons
 OmnipathR::collectri(organism=9606L, genesymbols=TRUE, loops=TRUE)
 ```
 
-```r
+```python
 # processed regulons
 import decoupler as dc
 dc.get_collectri(organism='human', split_complexes=False)
