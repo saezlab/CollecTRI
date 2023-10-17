@@ -58,6 +58,6 @@ resources included in CollecTRI can be found [here](https://github.com/saezlab/p
 
 
 ## Citation
-> Expanding the coverage of regulons from high-confidence prior knowledge for accurate estimation of transcription factor activities
-> Sophia Mueller-Dott, Eirini Tsirvouli, Miguel Vazquez, Ricardo Omar Ramirez Flores, Pau Badia-i-Mompel, Robin Fallegger, Astrid Lagreid, Julio Saez-Rodriguez
-> bioRxiv 2023.03.30.534849; doi: https://doi.org/10.1101/2023.03.30.534849
+> Müller-Dott, S., Tsirvouli, E., Vazquez, M., Ramirez Flores, R. O., Badia-I-Mompel, P., Fallegger, R., Türei, D., Lægreid, A., & Saez-Rodriguez, J. (2023).
+> Expanding the coverage of regulons from high-confidence prior knowledge for accurate estimation of transcription factor activities.
+> Nucleic Acids Research. https://doi.org/10.1093/nar/gkad841
