@@ -19,20 +19,20 @@ The CollecTRI regulons are available in the [DoRothEA](https://saezlab.github.io
 To load the CollecTRI regulons through R or python:
 ```r
 # processed regulons
-decoupler::get_collectri(organism='human', split_complexes=FALSE)
+decoupleR::get_collectri(organism='human', split_complexes=FALSE)
 
 # raw regulons
-OmnipathR::collectri(organism='human', genesymbols=TRUE, loops=TRUE)
+OmnipathR::collectri(organism=9606L, genesymbols=TRUE, loops=TRUE)
 ```
 
-```r
+```python
 # processed regulons
 import decoupler as dc
 dc.get_collectri(organism='human', split_complexes=False)
 
 # raw regulons
 import omnipath as op
-op.interactions.CollecTRI.get(genesymbols=True, organism='human', loops=True)
+op.interactions.CollecTRI.get(genesymbols=True, organism=9606L, loops=True)
 ```
 
 ## Resources included in CollecTRI
@@ -53,11 +53,11 @@ If you are interested in the construction of the CollecTRI meta-resource check
 out this [repository](https://github.com/Rbbt-Workflows/ExTRI)
 
 ## License
-The CollecTRI-derived regulons are freely available to the community. The original licenses of all 
-resources included in CollecTRI can be found [here](https://github.com/saezlab/pypath/blob/master/pypath/resources/data/resources.json)
+The CollecTRI-derived regulons are freely available for academic use. For commercial use please remove TF-gene interactions from SIGNOR.
+The original licenses of all resources included in CollecTRI can be found [here](https://github.com/saezlab/pypath/blob/master/pypath/resources/data/resources.json)
 
 
 ## Citation
-> Expanding the coverage of regulons from high-confidence prior knowledge for accurate estimation of transcription factor activities
-> Sophia Mueller-Dott, Eirini Tsirvouli, Miguel Vazquez, Ricardo Omar Ramirez Flores, Pau Badia-i-Mompel, Robin Fallegger, Astrid Lagreid, Julio Saez-Rodriguez
-> bioRxiv 2023.03.30.534849; doi: https://doi.org/10.1101/2023.03.30.534849
+> Müller-Dott, S., Tsirvouli, E., Vazquez, M., Ramirez Flores, R. O., Badia-I-Mompel, P., Fallegger, R., Türei, D., Lægreid, A., & Saez-Rodriguez, J. (2023).
+> Expanding the coverage of regulons from high-confidence prior knowledge for accurate estimation of transcription factor activities.
+> Nucleic Acids Research. https://doi.org/10.1093/nar/gkad841
