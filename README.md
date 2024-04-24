@@ -55,7 +55,7 @@ If you are interested in the construction of the CollecTRI meta-resource check
 out this [repository](https://github.com/Rbbt-Workflows/ExTRI)
 
 ## License
-The CollecTRI-derived regulons are freely available for academic use. For commercial use please remove TF-gene interactions from SIGNOR.
+The CollecTRI-derived regulons are freely available.
 The original licenses of all resources included in CollecTRI can be found [here](https://github.com/saezlab/pypath/blob/master/pypath/resources/data/resources.json)
 
 
