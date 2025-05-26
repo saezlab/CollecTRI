@@ -15,26 +15,19 @@ based on gene expression data using the knockTF data sets.
 </p>
 
 ## Data availability 
-The CollecTRI regulons are available in the [DoRothEA](https://saezlab.github.io/dorothea/) and [decoupler](https://saezlab.github.io/decoupleR/) packages through [OmniPath](https://omnipathdb.org/).
-A tutorial on how to perform TF activity estimation using CollecTRI is available in [R](https://saezlab.github.io/decoupleR/articles/tf_bk.html) and [python](https://decoupler-py.readthedocs.io/en/latest/notebooks/dorothea.html). 
+The CollecTRI regulons are available in the [DoRothEA](https://saezlab.github.io/dorothea/) and [decoupler](https://decoupler-py.readthedocs.io/) packages through [OmniPath](https://omnipathdb.org/).
 
-To load the CollecTRI regulons through R or python you can use the following lines:
-```r
-# processed regulons
-decoupleR::get_collectri(organism='human', split_complexes=FALSE)
+A tutorial on how to perform TF activity estimation using CollecTRI is available in [python](https://decoupler-py.readthedocs.io/en/latest/notebooks/scell/rna_sc.html#transcription-factor-scoring-from-gene-regulatory-networks) (recommended) and in [R](https://saezlab.github.io/decoupleR/articles/tf_bk.html) (deprecated). 
 
-# raw regulons
-OmnipathR::collectri(organism=9606L, genesymbols=TRUE, loops=TRUE)
-```
+To load the CollecTRI regulons through python or R you can use the following lines:
 
 ```python
-# processed regulons
 import decoupler as dc
-dc.get_collectri(organism='human', split_complexes=False)
+dc.op.collectri(organism='human')
+```
 
-# raw regulons
-import omnipath as op
-op.interactions.CollecTRI.get(genesymbols=True, organism=9606L, loops=True)
+```r
+decoupleR::get_collectri(organism='human', split_complexes=FALSE)
 ```
 
 ## Resources included in CollecTRI
