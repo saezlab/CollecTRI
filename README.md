@@ -15,9 +15,9 @@ based on gene expression data using the knockTF data sets.
 </p>
 
 ## Data availability 
-The CollecTRI regulons are available in the [DoRothEA](https://saezlab.github.io/dorothea/) and [decoupler](https://decoupler-py.readthedocs.io/) packages through [OmniPath](https://omnipathdb.org/).
+The CollecTRI regulons are available in the [DoRothEA](https://saezlab.github.io/dorothea/) and [decoupler](https://decoupler.readthedocs.io/) packages through [OmniPath](https://omnipathdb.org/).
 
-A tutorial on how to perform TF activity estimation using CollecTRI is available in [python](https://decoupler-py.readthedocs.io/en/latest/notebooks/scell/rna_sc.html#transcription-factor-scoring-from-gene-regulatory-networks) (recommended) and in [R](https://saezlab.github.io/decoupleR/articles/tf_bk.html) (deprecated). 
+A tutorial on how to perform TF activity estimation using CollecTRI is available in [python](https://decoupler.readthedocs.io/en/latest/notebooks/index.html) (recommended) and in [R](https://saezlab.github.io/decoupleR/articles/tf_bk.html) (deprecated). 
 
 To load the CollecTRI regulons through python or R you can use the following lines:
 
