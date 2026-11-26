@@ -3,6 +3,11 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
+> [!NOTE]
+> **CollecTRI is an approved [de.NBI](https://www.denbi.de/) service.**
+> Your feedback matters! Please help us improve by taking our
+> [short user survey](https://www.surveymonkey.de/r/denbi-service?sc=hd-hub&tool=collectri).
+
 ## Overview
 The CollecTRI-derived regulons contain signed transcription factor (TF) - target gene 
 interactions compiled from 12 different resources. This collection provides 
